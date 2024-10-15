@@ -1,8 +1,8 @@
 AS = as
 CC = gcc
-CFLAGS = -fno-stack-protector -ffreestanding -m64 -Ttext 0x8000
-LINKER = ld
-LINKER_FLAGS = -Ttext 0x7C00 --oformat binary
+CFLAGS = -fno-stack-protector -ffreestanding -m64 -Ttext 0x7E00
+LINKER_SCRIPT = linker.ld
+LINKER = ld -T $(LINKER_SCRIPT)
 SRC_DIR = ./src
 OBJ_DIR = ./obj
 BIN = drawerOS
@@ -18,7 +18,7 @@ all: build
 build: $(BIN)
 
 $(BIN): $(OBJS)
-	@$(LINKER) $(LINKER_FLAGS) $^ -o $@
+	@$(LINKER) $^ -o $@
 	@echo '[LD] $^'
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
