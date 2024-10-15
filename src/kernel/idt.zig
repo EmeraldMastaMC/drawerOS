@@ -1,3 +1,4 @@
+const cpu = @import("cpu.zig");
 const INTERRUPT_GATE: u8 = 0b00001110;
 const TRAP_GATE: u8 = 0b00001111;
 const RING_0: u8 = 0b00000000;
@@ -40,14 +41,7 @@ pub fn load() void {
         .base = @as(usize, @intFromPtr(@as(*void, @ptrCast(&InterruptDescriptorTable[0])))),
     };
 
-    lidt(@bitCast(idtr));
+    cpu.lidt(@bitCast(idtr));
 
     return;
-}
-
-fn lidt(idtr: u80) void {
-    asm volatile ("lidt %[p]"
-        :
-        : [p] "*p" (&idtr),
-    );
 }
