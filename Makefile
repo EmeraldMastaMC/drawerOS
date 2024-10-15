@@ -2,7 +2,7 @@ AS = as
 CC = gcc
 ZC = zig build-obj
 CFLAGS = -fno-stack-protector -ffreestanding -m64 -Ttext 0x7E00
-ZFLAGS = -fno-stack-protector -ffreestanding -m64 -Ttext 0x7E00
+ZFLAGS = -fno-stack-protector -target x86_64-freestanding-none -fbuiltin -OReleaseFast
 LINKER_SCRIPT = linker.ld
 LINKER = ld -T $(LINKER_SCRIPT)
 SRC_DIR = ./src
@@ -36,7 +36,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.zig
 	@mkdir -p $(dir $@)
-	@$(ZC) -femit-bin=$@ $<
+	@$(ZC) $(ZFLAGS) -femit-bin=$@ $<
 	@echo '[ZC] $<'
 
 clean:
