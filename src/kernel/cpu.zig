@@ -73,6 +73,22 @@ pub const cr3 = struct {
     }
 };
 
+pub const cr4 = struct {
+    pub inline fn write(value: u64) void {
+        asm volatile ("mov %[value], %cr4"
+            :
+            : [value] "{rax}" (value),
+            : "memory"
+        );
+    }
+
+    pub inline fn read() u64 {
+        return asm volatile ("mov %cr4, %[result]"
+            : [result] "={rax}" (-> u64),
+        );
+    }
+};
+
 pub inline fn getCS() u16 {
     return asm volatile ("mov %cs, %[result]"
         : [result] "=r" (-> u16),
