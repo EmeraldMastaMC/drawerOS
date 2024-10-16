@@ -1,4 +1,7 @@
 const cpu = @import("cpu.zig");
+
+// See section 4.6.5 of the manual for information regarding the Interrupt Descriptor Table
+//
 const INTERRUPT_GATE: u8 = 0b00001110;
 const TRAP_GATE: u8 = 0b00001111;
 const RING_0: u8 = 0b00000000;
@@ -9,6 +12,7 @@ const PRESENT: u8 = 0b10000000;
 
 const IDT_MAX_DESCRIPTORS: usize = 256;
 
+// See section 4.8.4 of the manual for information regarding Gate Descriptors
 const InterruptDescriptor64 = packed struct {
     offset_1: u16,
     selector: u16,
@@ -19,6 +23,7 @@ const InterruptDescriptor64 = packed struct {
     reserved: u32 = 0,
 };
 
+// See figure 4-8 of the manual for information regarding the IDTR
 const IDTR = packed struct(u80) {
     limit: u16,
     base: u64,

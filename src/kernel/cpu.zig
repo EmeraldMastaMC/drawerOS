@@ -1,3 +1,6 @@
+// See the Registers part of the Preface section of the manual for a list of all registers and an overview of what they are used for.
+// See figure 1-7 in section 1.4 of the manual for a list of all System Registers.
+
 // CPU state that needs to be saved and restored
 pub const Context = extern struct {
     // Segment registers. These aren't used in 64 bit mode. We use cr3 to control the page table
@@ -57,6 +60,7 @@ pub const msr = struct {
 };
 
 // Control register (points to the page L4 page table directory)
+// See section 5.3.2 of the manual for in depth information regarding the cr3 register
 pub const cr3 = struct {
     pub inline fn write(value: u64) void {
         asm volatile ("mov %[value], %cr3"
@@ -73,6 +77,8 @@ pub const cr3 = struct {
     }
 };
 
+// Control register (contains flags for the CPU)
+// See section 3.1.3 of the manual for in depth information regarding the cr4 register
 pub const cr4 = struct {
     pub inline fn write(value: u64) void {
         asm volatile ("mov %[value], %cr4"
@@ -101,6 +107,10 @@ pub inline fn getSS() u16 {
     );
 }
 
+// See section 4.6 of the manual for information regarding Descriptor Tables
+
+// See section 4.6.5 of the manual for information regarding the Interrupt Descriptor Table
+// Loads the Interrupt Descriptor Table
 pub inline fn lidt(idtr: u80) void {
     asm volatile ("lidt %[p]"
         :
@@ -108,6 +118,8 @@ pub inline fn lidt(idtr: u80) void {
     );
 }
 
+// See section 4.6.1 of the manual for information regarding the Global Descriptor Table
+// Loads the Global Descriptor Table
 pub inline fn lgdt(gdtr: u80) void {
     asm volatile ("lgdt %[p]"
         :

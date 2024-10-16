@@ -2,6 +2,8 @@
 .extern start
 .code16
 start_pm: # Start 32 bit mode
+
+  # Load the GDT
   cli
   lgdt gdt_descriptor
   movl %cr0, %eax
@@ -21,12 +23,13 @@ start_of_pm: # This is where 32 bit mode starts
   movw %ax, %ss
 
   call enable_paging
-  cli
   lgdt gdt_descriptor64
   ljmp $CODE_SEG64, $begin_lm
   hlt
 
 .equ PageTableEntry, 0x1000
+
+# Ripped from https://wiki.osdev.org/Paging
 enable_paging:
   movl $PageTableEntry, %edi
   movl %edi, %cr3
