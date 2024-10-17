@@ -3,6 +3,17 @@
 
 const cpu = @import("cpu.zig");
 
+pub const PML4_ENTRIES: usize = 1;
+pub const PDP_ENTRIES: usize = 1;
+pub const PD_ENTRIES: usize = 1;
+pub const PT_ENTRIES: usize = 512;
+
+pub const TOTAL_PML4_ENTRIES: usize = PML4_ENTRIES;
+pub const TOTAL_PDP_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES;
+pub const TOTAL_PD_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES * PD_ENTRIES;
+pub const TOTAL_PT_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES * PD_ENTRIES * PT_ENTRIES;
+
+// For information on the stucture of PML4Entry, PDPEntry, PDEntry, and PTEntry, please refer to section 5.3.3 of the manual
 // Page Map Level 4 (PML4) Table Entry
 pub const PML4Entry = packed struct(u64) {
     present: u1 = 1,
@@ -16,6 +27,19 @@ pub const PML4Entry = packed struct(u64) {
     base: u40,
     available_2: u11,
     no_execute: u1,
+
+    pub fn new(base: u64, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, available_1: u3, available_2: u11, no_execute: bool) PML4Entry {
+        return PML4Entry{
+            .read_write = @intFromBool(read_write),
+            .user_supervisor = @intFromBool(user_supervisor),
+            .write_through = @intFromBool(write_through),
+            .cache_disabled = @intFromBool(cache_disabled),
+            .available_1 = available_1,
+            .base = @truncate(base),
+            .available_2 = available_2,
+            .no_execute = @intFromBool(no_execute),
+        };
+    }
 };
 
 // Page Directory Pointer (PDP) Table Entry
@@ -31,6 +55,19 @@ pub const PDPEntry = packed struct(u64) {
     base: u40,
     available_2: u11,
     no_execute: u1,
+
+    pub fn new(base: u64, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, available_1: u3, available_2: u11, no_execute: bool) PDPEntry {
+        return PDPEntry{
+            .read_write = @intFromBool(read_write),
+            .user_supervisor = @intFromBool(user_supervisor),
+            .write_through = @intFromBool(write_through),
+            .cache_disabled = @intFromBool(cache_disabled),
+            .available_1 = available_1,
+            .base = @truncate(base),
+            .available_2 = available_2,
+            .no_execute = @intFromBool(no_execute),
+        };
+    }
 };
 
 // Page Directory (PD) Table Entry
@@ -46,6 +83,19 @@ pub const PDEntry = packed struct(u64) {
     base: u40,
     available_2: u11,
     no_execute: u1,
+
+    pub fn new(base: u64, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, available_1: u3, available_2: u11, no_execute: bool) PDEntry {
+        return PDEntry{
+            .read_write = @intFromBool(read_write),
+            .user_supervisor = @intFromBool(user_supervisor),
+            .write_through = @intFromBool(write_through),
+            .cache_disabled = @intFromBool(cache_disabled),
+            .available_1 = available_1,
+            .base = @truncate(base),
+            .available_2 = available_2,
+            .no_execute = @intFromBool(no_execute),
+        };
+    }
 };
 
 // Page Table (PT) Entry
@@ -63,9 +113,22 @@ pub const PTEntry = packed struct(u64) {
     base: u40,
     available_2: u11,
     no_execute: u1,
+
+    pub fn new(base: u64, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, global: bool, available_1: u3, available_2: u11, no_execute: bool) PTEntry {
+        return PTEntry{
+            .read_write = @intFromBool(read_write),
+            .user_supervisor = @intFromBool(user_supervisor),
+            .write_through = @intFromBool(write_through),
+            .cache_disabled = @intFromBool(cache_disabled),
+            .global = @intFromBool(global),
+            .available_1 = available_1,
+            .base = @truncate(base),
+            .available_2 = available_2,
+            .no_execute = @intFromBool(no_execute),
+        };
+    }
 };
 
-// Explain the PWT bit
 pub const CR3Entry = packed struct(u64) {
     reserved_1: u3 = 0,
     write_through: u1,
@@ -83,5 +146,24 @@ pub fn load_pml4(base_address: *PML4Entry) void {
         .write_through = 0,
         .cache_disabled = 0,
     };
+    cpu.cli();
     cpu.cr3.write(@bitCast(cr3entry));
+    cpu.sti();
+}
+
+pub fn identityMap(pml4_table: [*]PML4Entry, pdp_table: [*]PDPEntry, pd_table: [*]PDEntry, pt_table: [*]PTEntry) void {
+    for (0..TOTAL_PT_ENTRIES) |i| {
+        pt_table[i] = PTEntry.new(i * 0x1000, true, false, false, false, false, 0, 0, false);
+    }
+    for (0..TOTAL_PD_ENTRIES) |i| {
+        pd_table[i] = PDEntry.new(@intFromPtr(&pt_table[i]), true, false, false, false, 0, 0, false);
+    }
+    for (0..TOTAL_PDP_ENTRIES) |i| {
+        pdp_table[i] = PDPEntry.new(@intFromPtr(&pd_table[i]), true, false, false, false, 0, 0, false);
+    }
+    for (0..TOTAL_PML4_ENTRIES) |i| {
+        pml4_table[i] = PML4Entry.new(@intFromPtr(&pdp_table[i]), true, false, false, false, 0, 0, false);
+    }
+
+    load_pml4(&pml4_table[0]);
 }

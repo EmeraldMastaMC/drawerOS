@@ -107,6 +107,14 @@ pub inline fn getSS() u16 {
     );
 }
 
+pub inline fn cli() void {
+    asm volatile ("cli");
+}
+
+pub inline fn sti() void {
+    asm volatile ("sti");
+}
+
 // See section 4.6 of the manual for information regarding Descriptor Tables
 
 // See section 4.6.5 of the manual for information regarding the Interrupt Descriptor Table
