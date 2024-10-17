@@ -35,7 +35,7 @@ pub const PML4Entry = packed struct(u64) {
             .write_through = @intFromBool(write_through),
             .cache_disabled = @intFromBool(cache_disabled),
             .available_1 = available_1,
-            .base = @truncate(base),
+            .base = @truncate(base >> 12),
             .available_2 = available_2,
             .no_execute = @intFromBool(no_execute),
         };
@@ -63,7 +63,7 @@ pub const PDPEntry = packed struct(u64) {
             .write_through = @intFromBool(write_through),
             .cache_disabled = @intFromBool(cache_disabled),
             .available_1 = available_1,
-            .base = @truncate(base),
+            .base = @truncate(base >> 12),
             .available_2 = available_2,
             .no_execute = @intFromBool(no_execute),
         };
@@ -91,7 +91,7 @@ pub const PDEntry = packed struct(u64) {
             .write_through = @intFromBool(write_through),
             .cache_disabled = @intFromBool(cache_disabled),
             .available_1 = available_1,
-            .base = @truncate(base),
+            .base = @truncate(base >> 12),
             .available_2 = available_2,
             .no_execute = @intFromBool(no_execute),
         };
@@ -122,7 +122,7 @@ pub const PTEntry = packed struct(u64) {
             .cache_disabled = @intFromBool(cache_disabled),
             .global = @intFromBool(global),
             .available_1 = available_1,
-            .base = @truncate(base),
+            .base = @truncate(base >> 12),
             .available_2 = available_2,
             .no_execute = @intFromBool(no_execute),
         };
@@ -139,31 +139,29 @@ pub const CR3Entry = packed struct(u64) {
 };
 
 // Loads the address of the PML4 Table into memory
-pub fn load_pml4(base_address: *PML4Entry) void {
+pub fn load_pml4(base_address: [*]volatile PML4Entry) void {
     // Load the PML4 table into the CR3 register
-    const cr3entry = CR3Entry{
-        .base_address = @truncate(@intFromPtr(base_address) >> 12),
-        .write_through = 0,
-        .cache_disabled = 0,
-    };
+    // const cr3entry = CR3Entry{
+    //     .base_address = @truncate(@intFromPtr(base_address) >> 12),
+    //     .write_through = 0,
+    //     .cache_disabled = 0,
+    // };
     cpu.cli();
-    cpu.cr3.write(@bitCast(cr3entry));
-    cpu.sti();
+    cpu.cr3.write(@bitCast(@intFromPtr(base_address)));
 }
 
-pub fn identityMap(pml4_table: [*]PML4Entry, pdp_table: [*]PDPEntry, pd_table: [*]PDEntry, pt_table: [*]PTEntry) void {
+pub fn identityMap(pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry) void {
     for (0..TOTAL_PT_ENTRIES) |i| {
         pt_table[i] = PTEntry.new(i * 0x1000, true, false, false, false, false, 0, 0, false);
     }
     for (0..TOTAL_PD_ENTRIES) |i| {
-        pd_table[i] = PDEntry.new(@intFromPtr(&pt_table[i]), true, false, false, false, 0, 0, false);
+        pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8, true, false, false, false, 0, 0, false);
     }
     for (0..TOTAL_PDP_ENTRIES) |i| {
-        pdp_table[i] = PDPEntry.new(@intFromPtr(&pd_table[i]), true, false, false, false, 0, 0, false);
+        pdp_table[i] = PDPEntry.new(@intFromPtr(pd_table) + i * 8, true, false, false, false, 0, 0, false);
     }
     for (0..TOTAL_PML4_ENTRIES) |i| {
-        pml4_table[i] = PML4Entry.new(@intFromPtr(&pdp_table[i]), true, false, false, false, 0, 0, false);
+        pml4_table[i] = PML4Entry.new(@intFromPtr(pdp_table) + i * 8, true, false, false, false, 0, 0, false);
     }
-
-    load_pml4(&pml4_table[0]);
+    load_pml4(pml4_table);
 }

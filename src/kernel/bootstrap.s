@@ -1,7 +1,8 @@
-.code64
-.section .bootstrap
 .globl start
+.extern main
+.section .bootstrap
 start:
   call main
   cli
   hlt
+

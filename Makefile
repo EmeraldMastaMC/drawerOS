@@ -20,7 +20,8 @@ all: build
 
 build: $(BIN)
 
-$(BIN): $(OBJS)
+$(BIN): $(OBJS) 
+	@find $(OBJ_DIR) -type f -name '*.o.o' -delete
 	@$(LINKER) $^ -o $@
 	@echo '[LD] $^'
 
@@ -39,6 +40,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.zig
 	@$(ZC) $(ZFLAGS) -femit-bin=$@ $<
 	@echo '[ZC] $<'
 
+
 clean:
 	@echo '[INFO] Removing $(OBJ_DIR)'
 	@rm -rf $(OBJ_DIR)
@@ -47,4 +49,4 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
-	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw
+	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --no-reboot

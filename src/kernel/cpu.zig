@@ -63,16 +63,16 @@ pub const msr = struct {
 // See section 5.3.2 of the manual for in depth information regarding the cr3 register
 pub const cr3 = struct {
     pub inline fn write(value: u64) void {
-        asm volatile ("mov %[value], %cr3"
+        asm volatile ("movq %[value], %cr3"
             :
-            : [value] "{rax}" (value),
+            : [value] "{rbx}" (value),
             : "memory"
         );
     }
 
     pub inline fn read() u64 {
-        return asm volatile ("mov %cr3, %[result]"
-            : [result] "={rax}" (-> u64),
+        return asm volatile ("movq %cr3, %[result]"
+            : [result] "={rbx}" (-> u64),
         );
     }
 };
