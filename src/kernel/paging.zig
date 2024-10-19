@@ -141,13 +141,13 @@ pub const CR3Entry = packed struct(u64) {
 // Loads the address of the PML4 Table into memory
 pub fn load_pml4(base_address: [*]volatile PML4Entry) void {
     // Load the PML4 table into the CR3 register
-    // const cr3entry = CR3Entry{
-    //     .base_address = @truncate(@intFromPtr(base_address) >> 12),
-    //     .write_through = 0,
-    //     .cache_disabled = 0,
-    // };
+    const cr3entry = CR3Entry{
+        .base_address = @truncate(@intFromPtr(base_address) >> 12),
+        .write_through = 0,
+        .cache_disabled = 0,
+    };
     cpu.cli();
-    cpu.cr3.write(@bitCast(@intFromPtr(base_address)));
+    cpu.cr3.write(@bitCast(cr3entry));
 }
 
 pub fn identityMap(pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry) void {
@@ -167,10 +167,13 @@ pub fn identityMap(pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDP
 }
 
 pub fn mapPage(phys_addr: *void, virtual_addr: *void, pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, global: bool, no_execute: bool) void {
+
+    // See figure 5-17 in the manual
     const pml4_index = (@intFromPtr(virtual_addr) >> 39) & 0x1FF;
     const pdp_index = (@intFromPtr(virtual_addr) >> 30) & 0x1FF;
     const pd_index = (@intFromPtr(virtual_addr) >> 21) & 0x1FF;
     const pt_index = (@intFromPtr(virtual_addr) >> 12) & 0x1FF;
+
     if (pml4_table[pml4_index].base == 0) {
         pml4_table[pml4_index] = PML4Entry.new(@intFromPtr(pdp_table) + pml4_index * 8, true, false, false, false, 0, 0, false);
     }

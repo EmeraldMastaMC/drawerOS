@@ -14,7 +14,7 @@ OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 OBJS := $(patsubst $(SRC_DIR)/%.s,$(OBJ_DIR)/%.o,$(OBJS))
 OBJS := $(patsubst $(SRC_DIR)/%.zig,$(OBJ_DIR)/%.o,$(OBJS))
 
-.PHONY: all build clean run
+.PHONY: all build clean run dissasemble
 
 all: build
 
@@ -49,4 +49,8 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
-	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --no-reboot
+	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int
+
+dissasemble:
+	@echo '[INFO] Disassembling $(BIN)'
+	@objdump -b binary -m i386:x86-64 -D $(BIN)
