@@ -5,7 +5,7 @@ const cpu = @import("cpu.zig");
 
 pub const PML4_ENTRIES: usize = 1;
 pub const PDP_ENTRIES: usize = 1;
-pub const PD_ENTRIES: usize = 1;
+pub const PD_ENTRIES: usize = 3;
 pub const PT_ENTRIES: usize = 512;
 
 pub const TOTAL_PML4_ENTRIES: usize = PML4_ENTRIES;
@@ -177,11 +177,11 @@ pub fn mapPage(phys_addr: *void, virtual_addr: *void, pml4_table: [*]volatile PM
     if (pml4_table[pml4_index].base == 0) {
         pml4_table[pml4_index] = PML4Entry.new(@intFromPtr(pdp_table) + pml4_index * 8, true, false, false, false, 0, 0, false);
     }
-    if (pdp_table[pdp_index].base == 0) {
-        pdp_table[pdp_index] = PDPEntry.new(@intFromPtr(pd_table) + pdp_index * 8, true, false, false, false, 0, 0, false);
+    if (pdp_table[(pml4_index * 512) + pdp_index].base == 0) {
+        pdp_table[(pml4_index * 512) + pdp_index] = PDPEntry.new(@intFromPtr(pd_table) + pdp_index * 8, true, false, false, false, 0, 0, false);
     }
-    if (pd_table[pd_index].base == 0) {
-        pd_table[pd_index] = PDEntry.new(@intFromPtr(pt_table) + pd_index * 8, true, false, false, false, 0, 0, false);
+    if (pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index].base == 0) {
+        pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index] = PDEntry.new(@intFromPtr(pt_table) + pd_index * 8, true, false, false, false, 0, 0, false);
     }
 
     pt_table[(pml4_index * 512 * 512 * 512) + (pdp_index * 512 * 512) + (pd_index * 512) + pt_index] = PTEntry.new(@intFromPtr(phys_addr), read_write, user_supervisor, write_through, cache_disabled, global, 0, 0, no_execute);

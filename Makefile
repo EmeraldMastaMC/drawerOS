@@ -49,6 +49,10 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
+	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --enable-kvm
+
+run-nokvm:
+	@echo '[INFO] Running QEMU'
 	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int
 
 dissasemble:

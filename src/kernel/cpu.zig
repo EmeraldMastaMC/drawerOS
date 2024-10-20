@@ -134,3 +134,7 @@ pub inline fn lgdt(gdtr: u80) void {
         : [p] "*p" (&gdtr),
     );
 }
+
+pub inline fn hlt() void {
+    asm volatile ("hlt");
+}

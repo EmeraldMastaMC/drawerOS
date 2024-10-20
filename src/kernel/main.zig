@@ -2,6 +2,8 @@ const idt = @import("idt.zig");
 const irq = @import("irq.zig");
 const cpu = @import("cpu.zig");
 const paging = @import("paging.zig");
+const console = @import("console.zig");
+const colors = console.Color;
 
 extern fn isr0() align(8) callconv(.Naked) void;
 
@@ -12,24 +14,26 @@ var PD: [*]volatile paging.PDEntry = @ptrFromInt(0x3000);
 var PT: [*]volatile paging.PTEntry = @ptrFromInt(0x4000);
 
 export fn main() noreturn {
+    // Identity map the first 6 MiB of memory. The bootloader only mapped 2 MiB.
     paging.identityMap(PML4, PDP, PD, PT);
 
+    // Load IRQ 32 with a function, and then load the IDT.
     idt.entry(32, @as(usize, @intFromPtr(&irq.irq32)));
     idt.load();
 
-    // Test our putChar interrupt
-    asm volatile (
-    // column
-        \\ mov $39, %rdi
-        // row
-        \\ mov $12, %rsi
-        // Color
-        \\ mov $0xDB, %rdx
-        // Character
-        \\ mov $'A', %r10
-        // putChar Interrupt
-        \\ int $32
-    );
+    // Use a writer that depends on interrupts to function.
+    var writer = console.Writer.new(colors.White, colors.LightBlue);
+    writer.clear();
+    writer.enableCursor();
+    writer.putString("Hello, World! (Using Interrupts)\n");
 
-    while (true) {}
+    // Use a writer that doesn't depend on interrupts to function.
+    var raw_writer = console.RawWriter.fromWriter(writer);
+    raw_writer.setColors(colors.LightMagenta, colors.LightGreen);
+    raw_writer.putString("Hello, World! (Without Interrupts)\n");
+
+    while (true) {
+        cpu.cli();
+        cpu.hlt();
+    }
 }
