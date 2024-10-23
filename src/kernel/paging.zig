@@ -3,16 +3,6 @@
 
 const cpu = @import("cpu.zig");
 
-pub const PML4_ENTRIES: usize = 1;
-pub const PDP_ENTRIES: usize = 1;
-pub const PD_ENTRIES: usize = 3;
-pub const PT_ENTRIES: usize = 512;
-
-pub const TOTAL_PML4_ENTRIES: usize = PML4_ENTRIES;
-pub const TOTAL_PDP_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES;
-pub const TOTAL_PD_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES * PD_ENTRIES;
-pub const TOTAL_PT_ENTRIES: usize = PML4_ENTRIES * PDP_ENTRIES * PD_ENTRIES * PT_ENTRIES;
-
 // For information on the stucture of PML4Entry, PDPEntry, PDEntry, and PTEntry, please refer to section 5.3.3 of the manual
 // Page Map Level 4 (PML4) Table Entry
 pub const PML4Entry = packed struct(u64) {
@@ -150,18 +140,22 @@ pub fn load_pml4(base_address: [*]volatile PML4Entry) void {
     cpu.cr3.write(@bitCast(cr3entry));
 }
 
-pub fn identityMap(pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry) void {
-    for (0..TOTAL_PT_ENTRIES) |i| {
+pub fn identityMap(pml4_table: [*]volatile PML4Entry, pml4_entries: usize, pdp_table: [*]volatile PDPEntry, pdp_entries: usize, pd_table: [*]volatile PDEntry, pd_entries: usize, pt_table: [*]volatile PTEntry, pt_entries: usize) void {
+    const total_pml4_entries: usize = pml4_entries;
+    const total_pdp_entries: usize = pml4_entries * pdp_entries;
+    const total_pd_entries: usize = pml4_entries * pdp_entries * pd_entries;
+    const total_pt_entries: usize = pml4_entries * pdp_entries * pd_entries * pt_entries;
+    for (0..total_pt_entries) |i| {
         pt_table[i] = PTEntry.new(i * 0x1000, true, false, false, false, false, 0, 0, false);
     }
-    for (0..TOTAL_PD_ENTRIES) |i| {
-        pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8, true, false, false, false, 0, 0, false);
+    for (0..total_pd_entries) |i| {
+        pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
     }
-    for (0..TOTAL_PDP_ENTRIES) |i| {
-        pdp_table[i] = PDPEntry.new(@intFromPtr(pd_table) + i * 8, true, false, false, false, 0, 0, false);
+    for (0..total_pdp_entries) |i| {
+        pdp_table[i] = PDPEntry.new(@intFromPtr(pd_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
     }
-    for (0..TOTAL_PML4_ENTRIES) |i| {
-        pml4_table[i] = PML4Entry.new(@intFromPtr(pdp_table) + i * 8, true, false, false, false, 0, 0, false);
+    for (0..total_pml4_entries) |i| {
+        pml4_table[i] = PML4Entry.new(@intFromPtr(pdp_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
     }
     load_pml4(pml4_table);
 }
