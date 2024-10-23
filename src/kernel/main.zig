@@ -18,7 +18,7 @@ pub const PT_ENTRIES: u64 = 512;
 
 export fn main() noreturn {
     // Use a writer that doesn't depend on interrupts to function.
-    var raw_writer = console.RawWriter.new(colors.White, colors.LightBlue);
+    var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
     // Maps 600 MB
     raw_writer.putString("Identity Mapping 600MB...\n");
@@ -36,7 +36,9 @@ export fn main() noreturn {
     var writer = console.Writer.fromRawWriter(raw_writer);
     writer.enableCursor();
     writer.putLn();
+    writer.setColors(colors.LightGreen, colors.Black);
     writer.putString("Welcome to DrawerOS!\n");
+    writer.setColors(colors.White, colors.Black);
     writer.putLn();
 
     // Allocator
@@ -63,20 +65,20 @@ export fn main() noreturn {
         defer writer.putString("Done.\n");
         defer allocator.free(alloc0);
         defer writer.putString("Freeing allocated memory...\n");
+        writer.putString("Done.\n");
         writer.putString("Allocated address: ");
         writer.putHex(alloc0);
         writer.putLn();
-        writer.putString("Done.\n");
 
         writer.putString("Allocating Memory...\n");
         const alloc1 = allocator.alloc();
         defer writer.putString("Done.\n");
         defer allocator.free(alloc1);
         defer writer.putString("Freeing allocated memory...\n");
+        writer.putString("Done.\n");
         writer.putString("Allocated address: ");
         writer.putHex(alloc1);
         writer.putLn();
-        writer.putString("Done.\n");
     }
 
     while (true) {
