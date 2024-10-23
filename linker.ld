@@ -10,6 +10,7 @@ SECTIONS
   {
     *(.boot)
     *(.bootstrap)
+    . = 0x2000;
     *(.text)
   }
   .data :

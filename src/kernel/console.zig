@@ -70,6 +70,10 @@ pub const Writer = struct {
         return Writer{ .fg_color = writer.fg_color, .bg_color = writer.bg_color, .row = writer.row, .column = writer.column, .cursor = writer.cursor };
     }
 
+    pub fn putLn(self: *Writer) void {
+        self.putChar('\n');
+    }
+
     pub fn putChar(self: *Writer, char: u8) void {
         if (char == '\n') {
             self.column = 0;
@@ -86,9 +90,49 @@ pub const Writer = struct {
             }
         }
     }
+    pub fn putHex(self: *Writer, num: u64) void {
+        var hex = num;
+        var i: usize = 16;
+        self.putString("0x");
+        while (i > 0) {
+            const char: u8 = switch (@as(u4, @truncate((hex & 0xF000000000000000) >> 60))) {
+                0x0 => '0',
+                0x1 => '1',
+                0x2 => '2',
+                0x3 => '3',
+                0x4 => '4',
+                0x5 => '5',
+                0x6 => '6',
+                0x7 => '7',
+                0x8 => '8',
+                0x9 => '9',
+                0xA => 'A',
+                0xB => 'B',
+                0xC => 'C',
+                0xD => 'D',
+                0xE => 'E',
+                0xF => 'F',
+            };
+            self.putChar(char);
+            hex <<= 4;
+            i -= 1;
+        }
+    }
     pub fn putString(self: *Writer, str: []const u8) void {
         for (str) |char| {
             self.putChar(char);
+        }
+    }
+
+    pub fn putCString(self: *Writer, str: [*]u8) void {
+        var i: usize = 0;
+        while (true) {
+            if (str[i] == 0) {
+                break;
+            } else {
+                self.putChar(str[i]);
+            }
+            i += 1;
         }
     }
 
@@ -159,6 +203,10 @@ pub const RawWriter = struct {
         return RawWriter{ .fg_color = writer.fg_color, .bg_color = writer.bg_color, .row = writer.row, .column = writer.column, .cursor = writer.cursor };
     }
 
+    pub fn putLn(self: *RawWriter) void {
+        self.putChar('\n');
+    }
+
     pub fn putChar(self: *RawWriter, char: u8) void {
         if (char == '\n') {
             self.column = 0;
@@ -175,12 +223,51 @@ pub const RawWriter = struct {
             }
         }
     }
+    pub fn putHex(self: *RawWriter, num: u64) void {
+        var hex = num;
+        var i: usize = 16;
+        self.putString("0x");
+        while (i > 0) {
+            const char: u8 = switch (@as(u4, @truncate((hex & 0xF000000000000000) >> 60))) {
+                0x0 => '0',
+                0x1 => '1',
+                0x2 => '2',
+                0x3 => '3',
+                0x4 => '4',
+                0x5 => '5',
+                0x6 => '6',
+                0x7 => '7',
+                0x8 => '8',
+                0x9 => '9',
+                0xA => 'A',
+                0xB => 'B',
+                0xC => 'C',
+                0xD => 'D',
+                0xE => 'E',
+                0xF => 'F',
+            };
+            self.putChar(char);
+            hex <<= 4;
+            i -= 1;
+        }
+    }
     pub fn putString(self: *RawWriter, str: []const u8) void {
         for (str) |char| {
             self.putChar(char);
         }
     }
 
+    pub fn putCString(self: *RawWriter, str: [*]u8) void {
+        var i: usize = 0;
+        while (true) {
+            if (str[i] == 0) {
+                break;
+            } else {
+                self.putChar(str[i]);
+            }
+            i += 1;
+        }
+    }
     pub fn setColors(self: *RawWriter, fg_color: Color, bg_color: Color) void {
         self.setFgColor(fg_color);
         self.setBgColor(bg_color);
