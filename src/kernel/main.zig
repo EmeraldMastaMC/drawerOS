@@ -4,7 +4,8 @@ const cpu = @import("cpu.zig");
 const paging = @import("paging.zig");
 const console = @import("console.zig");
 const colors = console.Color;
-const page_allocator = @import("page_frame_allocator.zig");
+const allocator = @import("page_frame_allocator.zig");
+const heap_allocator = @import("heap_allocator.zig");
 
 pub const PML4: [*]volatile paging.PML4Entry = @ptrFromInt(0x1000);
 pub const PDP: [*]volatile paging.PDPEntry = @ptrFromInt(0x2000);
@@ -32,6 +33,8 @@ export fn main() noreturn {
     idt.load();
     raw_writer.putString("Done.\n");
 
+    allocator.init();
+
     // Use a writer that depends on interrupts to function.
     var writer = console.Writer.fromRawWriter(raw_writer);
     writer.enableCursor();
@@ -41,45 +44,55 @@ export fn main() noreturn {
     writer.setColors(colors.White, colors.Black);
     writer.putLn();
 
-    // Allocator
-    var allocator = page_allocator.Allocator.new();
-    allocator.init();
-
-    {
-        writer.putString("Allocating Memory...\n");
-        const string: [*]u8 = @ptrFromInt(allocator.alloc());
-        writer.putString("Done.\n");
-        defer writer.putString("Done.\n");
-        defer allocator.free(@intFromPtr(string));
-        defer writer.putString("Freeing allocated memory...\n");
-        writer.putString("Allocated address: ");
-        writer.putHex(@intFromPtr(string));
-        writer.putLn();
-    }
-
+    writer.putHex(allocator.alloc(10));
     writer.putLn();
-
-    {
-        writer.putString("Allocating Memory...\n");
-        const alloc0 = allocator.alloc();
-        defer writer.putString("Done.\n");
-        defer allocator.free(alloc0);
-        defer writer.putString("Freeing allocated memory...\n");
-        writer.putString("Done.\n");
-        writer.putString("Allocated address: ");
-        writer.putHex(alloc0);
-        writer.putLn();
-
-        writer.putString("Allocating Memory...\n");
-        const alloc1 = allocator.alloc();
-        defer writer.putString("Done.\n");
-        defer allocator.free(alloc1);
-        defer writer.putString("Freeing allocated memory...\n");
-        writer.putString("Done.\n");
-        writer.putString("Allocated address: ");
-        writer.putHex(alloc1);
-        writer.putLn();
-    }
+    writer.putHex(allocator.alloc(10));
+    writer.putLn();
+    writer.putHex(allocator.alloc(10));
+    writer.putLn();
+    writer.putHex(allocator.alloc(10));
+    writer.putLn();
+    const alloc = allocator.alloc(10);
+    writer.putHex(alloc);
+    writer.putLn();
+    allocator.free(alloc, 10);
+    writer.putHex(allocator.alloc(10));
+    writer.putLn();
+    // {
+    //     writer.putString("Allocating Memory...\n");
+    //     const string: [*]u8 = @ptrFromInt(allocator.alloc());
+    //     writer.putString("Done.\n");
+    //     defer writer.putString("Done.\n");
+    //     defer allocator.free(@intFromPtr(string));
+    //     defer writer.putString("Freeing allocated memory...\n");
+    //     writer.putString("Allocated address: ");
+    //     writer.putHex(@intFromPtr(string));
+    //     writer.putLn();
+    // }
+    //
+    // writer.putLn();
+    //
+    // {
+    //     writer.putString("Allocating Memory...\n");
+    //     const alloc0 = allocator.alloc();
+    //     defer writer.putString("Done.\n");
+    //     defer allocator.free(alloc0);
+    //     defer writer.putString("Freeing allocated memory...\n");
+    //     writer.putString("Done.\n");
+    //     writer.putString("Allocated address: ");
+    //     writer.putHex(alloc0);
+    //     writer.putLn();
+    //
+    //     writer.putString("Allocating Memory...\n");
+    //     const alloc1 = allocator.alloc();
+    //     defer writer.putString("Done.\n");
+    //     defer allocator.free(alloc1);
+    //     defer writer.putString("Freeing allocated memory...\n");
+    //     writer.putString("Done.\n");
+    //     writer.putString("Allocated address: ");
+    //     writer.putHex(alloc1);
+    //     writer.putLn();
+    // }
 
     while (true) {
         cpu.cli();
