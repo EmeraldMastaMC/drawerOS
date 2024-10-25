@@ -266,12 +266,20 @@ pub const RawWriter = struct {
             if (self.cursor) {
                 self.updateCursor();
             }
+            if (self.row == VGA_HEIGHT) {
+                self.row = 0;
+                self.column = 0;
+            }
         } else {
             putc(self.column, self.row, (@intFromEnum(self.bg_color) << 4) | @intFromEnum(self.fg_color), char);
             self.column += 1;
             if (self.column == VGA_WIDTH) {
                 self.column = 0;
                 self.row += 1;
+            }
+            if (self.row == VGA_HEIGHT) {
+                self.row = 0;
+                self.column = 0;
             }
 
             if (self.cursor) {
