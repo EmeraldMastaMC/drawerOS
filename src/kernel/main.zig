@@ -23,7 +23,7 @@ export fn main() noreturn {
     var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
     // Maps 600 MB
-    raw_writer.putString("Identity Mapping 600MB...\n");
+    raw_writer.putString("Identity Mapping 600MiB...\n");
     // paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
     paging.identityMap(PML4, 1, PDP, 1, PD, 300, PT, 512);
     raw_writer.putString("Done.\n");
@@ -43,7 +43,12 @@ export fn main() noreturn {
     raw_writer.putString("Done.\n");
 
     // Use a writer that depends on interrupts to function.
-    var writer = console.Writer.fromRawWriter(raw_writer);
+    const back_buffer = allocator.alloc(1);
+    defer allocator.free(back_buffer, 1);
+    var writer = console.Writer.fromRawWriter(
+        raw_writer,
+        @ptrCast(@as([*]u16, @ptrFromInt(back_buffer))),
+    );
     writer.enableCursor();
     writer.putLn();
     writer.setColors(colors.LightGreen, colors.Black);
@@ -75,6 +80,12 @@ export fn main() noreturn {
         writer.putCString(str);
     }
 
+    writer.flush();
+    for (0..1000000) |i| {
+        writer.putLn();
+        writer.putHex(i);
+        writer.flush();
+    }
     while (true) {
         cpu.cli();
         cpu.hlt();

@@ -9,6 +9,6 @@ pub inline fn init(addr: usize) void {
         \\ mov %[addr], %rsp
         \\ mov %[addr], %rbp
         :
-        : [addr] "rax" (addr),
+        : [addr] "{rax}" (addr),
     );
 }

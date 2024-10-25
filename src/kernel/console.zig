@@ -10,6 +10,13 @@ pub fn putc(column: usize, row: usize, col: u16, char: u8) void {
     }
 }
 
+pub fn putcBuf(column: usize, row: usize, col: u16, char: u8, buf: [*]u16) void {
+    const offset = row * VGA_WIDTH + column;
+    if ((offset) < (VGA_WIDTH * VGA_HEIGHT)) {
+        buf[offset] = (col << 8) | @as(u16, char);
+    }
+}
+
 pub fn setCursorPosition(column: usize, row: usize) void {
     const pos = row * VGA_WIDTH + column;
     ports.outb(0x3D4, 0x0F);
@@ -53,21 +60,26 @@ pub const Writer = struct {
     column: usize = 0,
     row: usize = 0,
     cursor: bool = false,
+    back_buffer: [*]u16,
 
-    pub fn new(fg_color: Color, bg_color: Color) Writer {
-        var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color };
+    pub fn new(fg_color: Color, bg_color: Color, buf: [*]u16) Writer {
+        var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color, .back_buffer = buf };
         writer.disableCursor();
+        writer.zero_buffer();
         return writer;
     }
 
-    pub fn newFromStart(fg_color: Color, bg_color: Color, column: usize, row: usize) Writer {
-        var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color, .column = column, .row = row };
+    pub fn newFromStart(fg_color: Color, bg_color: Color, column: usize, row: usize, buf: [*]u16) Writer {
+        var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color, .column = column, .row = row, .back_buffer = buf };
         writer.disableCursor();
+        writer.zero_buffer();
         return writer;
     }
 
-    pub fn fromRawWriter(writer: RawWriter) Writer {
-        return Writer{ .fg_color = writer.fg_color, .bg_color = writer.bg_color, .row = writer.row, .column = writer.column, .cursor = writer.cursor };
+    pub fn fromRawWriter(writer: RawWriter, buf: [*]u16) Writer {
+        var ret_writer = Writer{ .fg_color = writer.fg_color, .bg_color = writer.bg_color, .row = writer.row, .column = writer.column, .cursor = writer.cursor, .back_buffer = buf };
+        ret_writer.zero_buffer();
+        return ret_writer;
     }
 
     pub fn putLn(self: *Writer) void {
@@ -81,9 +93,19 @@ pub const Writer = struct {
             if (self.cursor) {
                 self.updateCursor();
             }
+            if (self.row == VGA_HEIGHT) {
+                self.scroll();
+            }
         } else {
-            putCharInterrupt(self.column, self.row, (@intFromEnum(self.bg_color) << 4) | @intFromEnum(self.fg_color), char);
+            putcBuf(self.column, self.row, (@intFromEnum(self.bg_color) << 4) | @intFromEnum(self.fg_color), char, self.back_buffer);
             self.column += 1;
+            if (self.column == VGA_WIDTH) {
+                self.column = 0;
+                self.row += 1;
+            }
+            if (self.row == VGA_HEIGHT) {
+                self.scroll();
+            }
 
             if (self.cursor) {
                 self.updateCursor();
@@ -159,6 +181,26 @@ pub const Writer = struct {
         self.row = 0;
     }
 
+    pub fn flush(self: *Writer) void {
+        for (0..VGA_HEIGHT) |row| {
+            for (0..VGA_WIDTH) |col| {
+                putCharInterrupt(col, row, (self.back_buffer[row * VGA_WIDTH + col] & 0xFF00) >> 8, @truncate(self.back_buffer[row * VGA_WIDTH + col] & 0x00FF));
+            }
+        }
+    }
+
+    pub fn scroll(self: *Writer) void {
+        for (1..VGA_HEIGHT) |row| {
+            for (0..VGA_WIDTH) |col| {
+                self.back_buffer[(row - 1) * VGA_WIDTH + col] = self.back_buffer[row * VGA_WIDTH + col];
+            }
+        }
+        for (0..VGA_WIDTH) |col| {
+            self.back_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + col] = 0;
+        }
+        self.row -= 1;
+    }
+
     // Cursor functions: wiki.osdev.org/Text_Mode_Cursor
     pub fn disableCursor(_: *Writer) void {
         ports.outb(0x3D4, 0x0A);
@@ -176,6 +218,16 @@ pub const Writer = struct {
 
     fn updateCursor(self: *Writer) void {
         setCursorPosition(self.column, self.row);
+    }
+
+    fn zero_buffer(self: *Writer) void {
+        // Trickery so that memset isn't called
+        var i: usize = 0;
+        while (i < (VGA_WIDTH * VGA_HEIGHT)) {
+            const addr: [*]u16 = @ptrFromInt(@intFromPtr(self.back_buffer) + i * 2);
+            addr[0] = 0;
+            i += 1;
+        }
     }
 };
 
@@ -217,6 +269,10 @@ pub const RawWriter = struct {
         } else {
             putc(self.column, self.row, (@intFromEnum(self.bg_color) << 4) | @intFromEnum(self.fg_color), char);
             self.column += 1;
+            if (self.column == VGA_WIDTH) {
+                self.column = 0;
+                self.row += 1;
+            }
 
             if (self.cursor) {
                 self.updateCursor();
