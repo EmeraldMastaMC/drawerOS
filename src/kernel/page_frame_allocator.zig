@@ -35,7 +35,6 @@ pub fn init() void {
 
     // Video memory
     page_bitmap[0xb8] |= 1;
-    page_bitmap[0x1b] |= 1;
 
     // Page 0. This is not able to be allocated so that we can use a null pointer for an error in the alloc function
     page_bitmap[0] |= 1;
@@ -64,11 +63,13 @@ pub fn alloc(amnt_pages: usize) usize {
             var detected_page_in_use = false;
 
             // If there is a bit set, that means a page in the window is in use
-            for (window) |num| {
-                if (num == 1) {
+            var i: usize = 0;
+            while (i != amnt_pages) {
+                if (window[i] == 1) {
                     detected_page_in_use = true;
                     break;
                 }
+                i += 1;
             }
 
             // We detected a page in use, forward to the index after the last set bit in the window
@@ -86,8 +87,10 @@ pub fn alloc(amnt_pages: usize) usize {
                     j -= 1;
                 }
             } else { // We didn't detect a page in use, return the start of the window's address, and set all bits in the window
-                for (0..amnt_pages) |i| {
-                    page_bitmap[window_index + i] |= 1;
+                var k: usize = 0;
+                while (k != amnt_pages) {
+                    page_bitmap[window_index + k] = 1;
+                    k += 1;
                 }
                 return bitmapPosToAddr(window_index);
             }

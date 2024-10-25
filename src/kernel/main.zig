@@ -44,19 +44,13 @@ export fn main() noreturn {
     writer.setColors(colors.White, colors.Black);
     writer.putLn();
 
-    writer.putHex(allocator.alloc(10));
+    var heap = heap_allocator.Heap.new(10);
+    heap.init();
+    writer.putHex(@intFromPtr(heap.alloc(5)));
     writer.putLn();
-    writer.putHex(allocator.alloc(10));
+    writer.putHex(@intFromPtr(heap.alloc(7)));
     writer.putLn();
-    writer.putHex(allocator.alloc(10));
-    writer.putLn();
-    writer.putHex(allocator.alloc(10));
-    writer.putLn();
-    const alloc = allocator.alloc(10);
-    writer.putHex(alloc);
-    writer.putLn();
-    allocator.free(alloc, 10);
-    writer.putHex(allocator.alloc(10));
+    writer.putHex(@intFromPtr(heap.alloc(10)));
     writer.putLn();
     // {
     //     writer.putString("Allocating Memory...\n");
