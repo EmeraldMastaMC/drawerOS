@@ -22,10 +22,10 @@ export fn main() noreturn {
     // Use a writer that doesn't depend on interrupts to function.
     var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
+
     // Maps 600 MB
     raw_writer.putString("Identity Mapping 600MiB...\n");
-    // paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
-    paging.identityMap(PML4, 1, PDP, 1, PD, 300, PT, 512);
+    paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
     raw_writer.putString("Done.\n");
 
     raw_writer.putString("Initializing Page Frame Allocator...\n");
@@ -43,12 +43,9 @@ export fn main() noreturn {
     raw_writer.putString("Done.\n");
 
     // Use a writer that depends on interrupts to function.
-    const back_buffer = allocator.alloc(1);
-    defer allocator.free(back_buffer, 1);
-    var writer = console.Writer.fromRawWriter(
-        raw_writer,
-        @ptrCast(@as([*]u16, @ptrFromInt(back_buffer))),
-    );
+    const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
+    defer allocator.free(@intFromPtr(back_buffer), 10);
+    var writer = console.Writer.new(colors.White, colors.Black, back_buffer);
     writer.enableCursor();
     writer.putLn();
     writer.setColors(colors.LightGreen, colors.Black);
@@ -81,7 +78,7 @@ export fn main() noreturn {
     }
 
     writer.flush();
-    for (0..1000000) |i| {
+    for (0..3) |i| {
         writer.putLn();
         writer.putHex(i);
         writer.flush();

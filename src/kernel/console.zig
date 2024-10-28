@@ -10,7 +10,7 @@ pub fn putc(column: usize, row: usize, col: u16, char: u8) void {
     }
 }
 
-pub fn putcBuf(column: usize, row: usize, col: u16, char: u8, buf: [*]u16) void {
+pub fn putcBuf(column: usize, row: usize, col: u16, char: u8, buf: [*]volatile u16) void {
     const offset = row * VGA_WIDTH + column;
     if ((offset) < (VGA_WIDTH * VGA_HEIGHT)) {
         buf[offset] = (col << 8) | @as(u16, char);
@@ -60,41 +60,41 @@ pub const Writer = struct {
     column: usize = 0,
     row: usize = 0,
     cursor: bool = false,
-    back_buffer: [*]u16,
+    back_buffer: [*]volatile u16 = undefined,
 
-    pub fn new(fg_color: Color, bg_color: Color, buf: [*]u16) Writer {
+    pub fn new(fg_color: Color, bg_color: Color, buf: [*]volatile u16) *volatile Writer {
         var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color, .back_buffer = buf };
         writer.disableCursor();
         writer.zero_buffer();
-        return writer;
+        return &writer;
     }
 
-    pub fn newFromStart(fg_color: Color, bg_color: Color, column: usize, row: usize, buf: [*]u16) Writer {
+    pub inline fn newFromStart(fg_color: Color, bg_color: Color, column: usize, row: usize, buf: [*]volatile u16) *volatile Writer {
         var writer = Writer{ .fg_color = fg_color, .bg_color = bg_color, .column = column, .row = row, .back_buffer = buf };
         writer.disableCursor();
         writer.zero_buffer();
-        return writer;
+        return &writer;
     }
 
-    pub fn fromRawWriter(writer: RawWriter, buf: [*]u16) Writer {
+    pub fn fromRawWriter(writer: RawWriter, buf: [*]volatile u16) *volatile Writer {
         var ret_writer = Writer{ .fg_color = writer.fg_color, .bg_color = writer.bg_color, .row = writer.row, .column = writer.column, .cursor = writer.cursor, .back_buffer = buf };
         ret_writer.zero_buffer();
-        return ret_writer;
+        return &ret_writer;
     }
 
-    pub fn putLn(self: *Writer) void {
+    pub fn putLn(self: *volatile Writer) void {
         self.putChar('\n');
     }
 
-    pub fn putChar(self: *Writer, char: u8) void {
+    pub fn putChar(self: *volatile Writer, char: u8) void {
         if (char == '\n') {
             self.column = 0;
             self.row += 1;
-            if (self.cursor) {
-                self.updateCursor();
-            }
             if (self.row == VGA_HEIGHT) {
                 self.scroll();
+            }
+            if (self.cursor) {
+                self.updateCursor();
             }
         } else {
             putcBuf(self.column, self.row, (@intFromEnum(self.bg_color) << 4) | @intFromEnum(self.fg_color), char, self.back_buffer);
@@ -112,7 +112,7 @@ pub const Writer = struct {
             }
         }
     }
-    pub fn putHex(self: *Writer, num: u64) void {
+    pub fn putHex(self: *volatile Writer, num: u64) void {
         var hex = num;
         var i: usize = 16;
         self.putString("0x");
@@ -140,13 +140,13 @@ pub const Writer = struct {
             i -= 1;
         }
     }
-    pub fn putString(self: *Writer, str: []const u8) void {
+    pub fn putString(self: *volatile Writer, str: []const u8) void {
         for (str) |char| {
             self.putChar(char);
         }
     }
 
-    pub fn putCString(self: *Writer, str: [*]u8) void {
+    pub fn putCString(self: *volatile Writer, str: [*]u8) void {
         var i: usize = 0;
         while (true) {
             if (str[i] == 0) {
@@ -158,20 +158,20 @@ pub const Writer = struct {
         }
     }
 
-    pub fn setColors(self: *Writer, fg_color: Color, bg_color: Color) void {
+    pub fn setColors(self: *volatile Writer, fg_color: Color, bg_color: Color) void {
         self.setFgColor(fg_color);
         self.setBgColor(bg_color);
     }
 
-    pub fn setFgColor(self: *Writer, fg_color: Color) void {
+    pub fn setFgColor(self: *volatile Writer, fg_color: Color) void {
         self.fg_color = fg_color;
     }
 
-    pub fn setBgColor(self: *Writer, bg_color: Color) void {
+    pub fn setBgColor(self: *volatile Writer, bg_color: Color) void {
         self.bg_color = bg_color;
     }
 
-    pub fn clear(self: *Writer) void {
+    pub fn clear(self: *volatile Writer) void {
         for (0..VGA_HEIGHT) |_| {
             for (0..VGA_WIDTH) |_| {
                 self.putChar(' ');
@@ -181,7 +181,7 @@ pub const Writer = struct {
         self.row = 0;
     }
 
-    pub fn flush(self: *Writer) void {
+    pub fn flush(self: *volatile Writer) void {
         for (0..VGA_HEIGHT) |row| {
             for (0..VGA_WIDTH) |col| {
                 putCharInterrupt(col, row, (self.back_buffer[row * VGA_WIDTH + col] & 0xFF00) >> 8, @truncate(self.back_buffer[row * VGA_WIDTH + col] & 0x00FF));
@@ -189,7 +189,7 @@ pub const Writer = struct {
         }
     }
 
-    pub fn scroll(self: *Writer) void {
+    pub fn scroll(self: *volatile Writer) void {
         for (1..VGA_HEIGHT) |row| {
             for (0..VGA_WIDTH) |col| {
                 self.back_buffer[(row - 1) * VGA_WIDTH + col] = self.back_buffer[row * VGA_WIDTH + col];
@@ -202,12 +202,12 @@ pub const Writer = struct {
     }
 
     // Cursor functions: wiki.osdev.org/Text_Mode_Cursor
-    pub fn disableCursor(_: *Writer) void {
+    pub fn disableCursor(_: *volatile Writer) void {
         ports.outb(0x3D4, 0x0A);
         ports.outb(0x3D5, 0x20);
     }
 
-    pub fn enableCursor(self: *Writer) void {
+    pub fn enableCursor(self: *volatile Writer) void {
         self.cursor = true;
         ports.outb(0x3D4, 0x0A);
         ports.outb(0x3D5, (ports.inb(0x3D5) & 0xC0) | 0);
@@ -216,15 +216,15 @@ pub const Writer = struct {
         self.updateCursor();
     }
 
-    fn updateCursor(self: *Writer) void {
+    fn updateCursor(self: *volatile Writer) void {
         setCursorPosition(self.column, self.row);
     }
 
-    fn zero_buffer(self: *Writer) void {
+    fn zero_buffer(self: *volatile Writer) void {
         // Trickery so that memset isn't called
         var i: usize = 0;
         while (i < (VGA_WIDTH * VGA_HEIGHT)) {
-            const addr: [*]u16 = @ptrFromInt(@intFromPtr(self.back_buffer) + i * 2);
+            const addr: [*]volatile u16 = @ptrFromInt(@intFromPtr(self.back_buffer) + i * 2);
             addr[0] = 0;
             i += 1;
         }
