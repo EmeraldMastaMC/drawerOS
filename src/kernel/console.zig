@@ -112,12 +112,99 @@ pub const Writer = struct {
             }
         }
     }
-    pub fn putHex(self: *volatile Writer, num: u64) void {
+    pub fn putHexQuad(self: *volatile Writer, num: u64) void {
         var hex = num;
         var i: usize = 16;
         self.putString("0x");
         while (i > 0) {
             const char: u8 = switch (@as(u4, @truncate((hex & 0xF000000000000000) >> 60))) {
+                0x0 => '0',
+                0x1 => '1',
+                0x2 => '2',
+                0x3 => '3',
+                0x4 => '4',
+                0x5 => '5',
+                0x6 => '6',
+                0x7 => '7',
+                0x8 => '8',
+                0x9 => '9',
+                0xA => 'A',
+                0xB => 'B',
+                0xC => 'C',
+                0xD => 'D',
+                0xE => 'E',
+                0xF => 'F',
+            };
+            self.putChar(char);
+            hex <<= 4;
+            i -= 1;
+        }
+    }
+
+    pub fn putHexLong(self: *volatile Writer, num: u32) void {
+        var hex = num;
+        var i: usize = 8;
+        self.putString("0x");
+        while (i > 0) {
+            const char: u8 = switch (@as(u4, @truncate((hex & 0xF0000000) >> 28))) {
+                0x0 => '0',
+                0x1 => '1',
+                0x2 => '2',
+                0x3 => '3',
+                0x4 => '4',
+                0x5 => '5',
+                0x6 => '6',
+                0x7 => '7',
+                0x8 => '8',
+                0x9 => '9',
+                0xA => 'A',
+                0xB => 'B',
+                0xC => 'C',
+                0xD => 'D',
+                0xE => 'E',
+                0xF => 'F',
+            };
+            self.putChar(char);
+            hex <<= 4;
+            i -= 1;
+        }
+    }
+
+    pub fn putHexWord(self: *volatile Writer, num: u16) void {
+        var hex = num;
+        var i: usize = 4;
+        self.putString("0x");
+        while (i > 0) {
+            const char: u8 = switch (@as(u4, @truncate((hex & 0xF000) >> 12))) {
+                0x0 => '0',
+                0x1 => '1',
+                0x2 => '2',
+                0x3 => '3',
+                0x4 => '4',
+                0x5 => '5',
+                0x6 => '6',
+                0x7 => '7',
+                0x8 => '8',
+                0x9 => '9',
+                0xA => 'A',
+                0xB => 'B',
+                0xC => 'C',
+                0xD => 'D',
+                0xE => 'E',
+                0xF => 'F',
+            };
+            self.putChar(char);
+            hex <<= 4;
+            i -= 1;
+        }
+    }
+
+    pub fn putHexByte(self: *volatile Writer, num: u8) void {
+        var hex = num;
+        var i: usize = 2;
+        self.putString("0x");
+        while (i > 0) {
+            const char: u8 = switch (@as(u4, @truncate((hex & 0xF0) >> 4))) {
                 0x0 => '0',
                 0x1 => '1',
                 0x2 => '2',

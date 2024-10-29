@@ -82,60 +82,67 @@ export fn main() noreturn {
     //     writer.putCString(str);
     // }
 
-    var usb_slot: u8 = undefined;
-    var usb_bus: u8 = undefined;
     for (0..256) |bus| {
         for (0..256) |slot| {
-            const device = pci.getDevice(@truncate(bus), @truncate(slot));
-            if (device != 0xFFFF) {
-                // writer.putString("Device Found: ");
-                // writer.putHex(@as(u64, device));
-                // writer.putLn();
-                // writer.putString("    Vendor ID: ");
-                // writer.putHex(@as(u64, pci.getVendor(@truncate(bus), @truncate(slot))));
-                // writer.putLn();
-                // writer.putString("    Class ID: ");
-                // writer.putHex(@as(u64, pci.getClass(@truncate(bus), @truncate(slot))));
-                // writer.putLn();
-                // writer.putString("    Sub Class ID: ");
-                // writer.putHex(@as(u64, pci.getSubClass(@truncate(bus), @truncate(slot))));
-                // writer.putLn();
-                // writer.putString("    Prog If: ");
-                // writer.putHex(@as(u64, pci.getProgIf(@truncate(bus), @truncate(slot))));
-                // writer.putLn();
-                // writer.flush();
-                const class = pci.getClass(@truncate(bus), @truncate(slot));
-                const sub_class = pci.getSubClass(@truncate(bus), @truncate(slot));
-                const prog_if = pci.getProgIf(@truncate(bus), @truncate(slot));
+            const exists = pci.deviceExists(@truncate(bus), @truncate(slot));
+            if (exists) {
+                const usb_device = pci.Device.new(@truncate(bus), @truncate(slot));
+                writer.putLn();
+                writer.putString("Found PCI Device!\n");
 
-                if ((class == SERIAL_BUS_CONTROLLER) and (sub_class == USB_CONTROLLER) and (prog_if == XHCI_CONTROLLER)) {
-                    usb_slot = @truncate(slot);
-                    usb_bus = @truncate(bus);
-                    break;
-                }
+                writer.putString("    Slot: ");
+                writer.putHexByte(usb_device.slot);
+                writer.putLn();
+
+                writer.putString("    Bus: ");
+                writer.putHexByte(usb_device.bus);
+                writer.putLn();
+
+                writer.putString("    Device ID: ");
+                writer.putHexWord(usb_device.device_id);
+                writer.putLn();
+
+                writer.putString("    Vendor ID: ");
+                writer.putHexWord(usb_device.vendor_id);
+                writer.putLn();
+
+                writer.putString("    Class Code: ");
+                writer.putHexByte(usb_device.class);
+                writer.putLn();
+
+                writer.putString("    Subclass Code: ");
+                writer.putHexByte(usb_device.subclass);
+                writer.putLn();
+
+                writer.putString("    Prog IF: ");
+                writer.putHexByte(usb_device.prog_if);
+                writer.putLn();
+
+                writer.putString("    Revision ID: ");
+                writer.putHexByte(usb_device.revision_id);
+                writer.putLn();
+
+                writer.putString("    Status: ");
+                writer.putHexWord(usb_device.status);
+                writer.putLn();
+
+                writer.putString("    Command Flags: ");
+                writer.putHexWord(usb_device.command_flags);
+                writer.putLn();
+
+                writer.putString("    Header Type: ");
+                writer.putHexByte(usb_device.header_type);
+                writer.putLn();
+
+                writer.putString("    BAR: ");
+                writer.putHexQuad(usb_device.bar);
+                writer.putLn();
+
+                writer.putString("    BAR Size: ");
+                writer.putHexQuad(usb_device.bar_size);
             }
         }
     }
-    writer.putString("USB XHCI_CONTROLLER Found: ");
-    writer.putLn();
-
-    writer.putString("PCI Slot: ");
-    writer.putHex(@as(usize, usb_slot));
-    writer.putLn();
-
-    writer.putString("PCI Bus: ");
-    writer.putHex(@as(usize, usb_bus));
-    writer.putLn();
-
-    const usb_bar = pci.getBAR(usb_bus, usb_slot);
-    const usb_bar_size = pci.getBARSize(usb_bus, usb_slot, usb_bar);
-    writer.putString("PCI BAR: ");
-    writer.putHex(usb_bar);
-    writer.putLn();
-
-    writer.putString("BAR SIZE: ");
-    writer.putHex(usb_bar_size);
-    writer.putLn();
 
     writer.flush();
     while (true) {
