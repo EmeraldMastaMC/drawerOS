@@ -7,6 +7,7 @@ const colors = console.Color;
 const allocator = @import("page_frame_allocator.zig");
 const heap_allocator = @import("heap_allocator.zig");
 const stack = @import("stack.zig");
+const pci = @import("pci.zig");
 
 pub const PML4: [*]volatile paging.PML4Entry = @ptrFromInt(0x1000);
 pub const PDP: [*]volatile paging.PDPEntry = @ptrFromInt(0x2000);
@@ -77,12 +78,22 @@ export fn main() noreturn {
         writer.putCString(str);
     }
 
-    writer.flush();
-    for (0..3) |i| {
-        writer.putLn();
-        writer.putHex(i);
-        writer.flush();
+    for (0..256) |bus| {
+        for (0..256) |slot| {
+            const device = pci.checkDevice(@truncate(bus), @truncate(slot));
+            if (device != 0xFFFF) {
+                writer.putString("Device Found: ");
+                writer.putHex(@as(u64, device));
+                writer.putLn();
+                writer.putString("    Vendor ID: ");
+                writer.putHex(@as(u64, pci.checkVendor(@truncate(bus), @truncate(slot))));
+                writer.putLn();
+                writer.flush();
+            }
+        }
     }
+
+    writer.flush();
     while (true) {
         cpu.cli();
         cpu.hlt();

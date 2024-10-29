@@ -11,7 +11,7 @@ pub inline fn inb(port: u16) u8 {
     var result: u8 = undefined;
     asm volatile (
         \\ inb %[port], %[result]
-        : [result] "=al" (result),
+        : [result] "={al}" (result),
         : [port] "{dx}" (port),
     );
     return result;
@@ -30,7 +30,7 @@ pub inline fn inw(port: u16) u16 {
     var result: u16 = undefined;
     asm volatile (
         \\ inw %[port], %[result]
-        : [result] "=ax" (result),
+        : [result] "={ax}" (result),
         : [port] "{dx}" (port),
     );
     return result;
@@ -49,7 +49,7 @@ pub inline fn inl(port: u16) u32 {
     var result: u32 = undefined;
     asm volatile (
         \\ inl %[port], %[result]
-        : [result] "=eax" (result),
+        : [result] "={eax}" (result),
         : [port] "{dx}" (port),
     );
     return result;
@@ -68,7 +68,7 @@ pub inline fn inq(port: u16) u64 {
     var result: u64 = undefined;
     asm volatile (
         \\ inq %[port], %[result]
-        : [result] "=rax" (result),
+        : [result] "={rax}" (result),
         : [port] "{dx}" (port),
     );
     return result;

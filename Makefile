@@ -49,7 +49,7 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
-	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --enable-kvm -m 4G
+	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --enable-kvm -m 4G -device qemu-xhci
 
 run-nokvm:
 	@echo '[INFO] Running QEMU'
