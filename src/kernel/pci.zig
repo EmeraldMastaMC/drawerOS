@@ -13,14 +13,14 @@ const REGISTER1: u8 = 0x4;
 const REGISTER2: u8 = 0x8;
 const REGISTER3: u8 = 0xC;
 
-pub const BARType = enum {
+pub const BARType = enum(u8) {
     io_space,
     mmio32,
     mmio64,
 };
 
 // Header Type 0x0
-pub const Device = struct {
+pub const Device = packed struct {
     bus: u8,
     slot: u8,
     device_id: u16,
@@ -65,6 +65,17 @@ pub const Device = struct {
             .bar_type = bar_type,
             .bar_size = bar_size,
         };
+    }
+
+    pub fn getBARTypeCode(self: *Device) u8 {
+        return switch (self.bar_type) {
+            BARType.mmio32 => 0x0,
+            BARType.mmio64 => 0x1,
+            BARType.io_space => 0x2,
+        };
+    }
+    pub fn BARExists(self: *Device) bool {
+        return self.bar != 0x0000000000000000;
     }
 };
 
@@ -219,12 +230,24 @@ pub fn getBARSize(bus: u8, slot: u8, bar: u64) usize {
         const mask = configReadLong(bus, slot, 0, CONFIG_BAR0);
         configWriteLong(bus, slot, 0, CONFIG_BAR0, @truncate(bar & 0xFFFFFFFF));
 
-        return ~(@as(u64, mask) | 0xFFFFFFFF00000000) + 1;
+        return ~(@as(u64, mask & 0xFFFFFFF0) | 0xFFFFFFFF00000000) + 1;
     } else {
         configWriteLong(bus, slot, 0, CONFIG_BAR0, 0xFFFFFFFF);
         const mask = configReadLong(bus, slot, 0, CONFIG_BAR0);
         configWriteLong(bus, slot, 0, CONFIG_BAR0, @truncate(bar & 0xFFFFFFFF));
 
-        return ~(@as(u64, mask) | 0xFFFFFFFF00000000) + 1;
+        return ~(@as(u64, mask & 0xFFFFFFFC) | 0xFFFFFFFF00000000) + 1;
     }
+}
+
+pub fn numDevices() usize {
+    var amnt_pci_devices: usize = 0;
+    for (0..256) |bus| {
+        for (0..256) |slot| {
+            if (deviceExists(@truncate(bus), @truncate(slot))) {
+                amnt_pci_devices += 1;
+            }
+        }
+    }
+    return amnt_pci_devices;
 }

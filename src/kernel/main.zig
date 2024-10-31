@@ -3,11 +3,11 @@ const irq = @import("irq.zig");
 const cpu = @import("cpu.zig");
 const paging = @import("paging.zig");
 const console = @import("console.zig");
-const colors = console.Color;
 const allocator = @import("page_frame_allocator.zig");
 const heap_allocator = @import("heap_allocator.zig");
 const stack = @import("stack.zig");
 const pci = @import("pci.zig");
+const colors = console.Color;
 
 pub const PML4: [*]volatile paging.PML4Entry = @ptrFromInt(0x1000);
 pub const PDP: [*]volatile paging.PDPEntry = @ptrFromInt(0x2000);
@@ -19,16 +19,11 @@ pub const PDP_ENTRIES: u64 = 1;
 pub const PD_ENTRIES: u64 = 300;
 pub const PT_ENTRIES: u64 = 512;
 
-const SERIAL_BUS_CONTROLLER: u8 = 0xC;
-const USB_CONTROLLER: u8 = 0x3;
-const XHCI_CONTROLLER: u8 = 0x30;
-
 export fn main() noreturn {
     // Use a writer that doesn't depend on interrupts to function.
     var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
 
-    // Maps 600 MB
     raw_writer.putString("Identity Mapping 600MiB...\n");
     paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
     raw_writer.putString("Done.\n");
@@ -58,93 +53,41 @@ export fn main() noreturn {
     writer.setColors(colors.White, colors.Black);
     writer.putLn();
 
-    // {
-    //     writer.putString("Creating a 40KiB heap...\n");
-    //     var heap = heap_allocator.Heap.new(10);
-    //     writer.putString("Done.\n");
-    //     defer writer.putString("Done.\n");
-    //     defer heap.deinit();
-    //     defer writer.putString("Deallocating heap...\n");
-    //     writer.putString("Allocating 8 Byte str...\n");
-    //     var str: [*]u8 = @ptrCast(heap.alloc(8));
-    //     writer.putString("Done.\n");
-    //     defer writer.putString("Done.\n");
-    //     defer heap.free(@ptrCast(str), 8);
-    //     defer writer.putString("Deallocating str...\n");
-    //     str[0] = 'H';
-    //     str[1] = 'e';
-    //     str[2] = 'l';
-    //     str[3] = 'l';
-    //     str[4] = 'o';
-    //     str[5] = '!';
-    //     str[6] = '\n';
-    //     str[7] = 0x0;
-    //     writer.putCString(str);
-    // }
+    {
+        const num_pci_devices = pci.numDevices();
 
-    for (0..256) |bus| {
-        for (0..256) |slot| {
-            const exists = pci.deviceExists(@truncate(bus), @truncate(slot));
-            if (exists) {
-                const usb_device = pci.Device.new(@truncate(bus), @truncate(slot));
-                writer.putLn();
-                writer.putString("Found PCI Device!\n");
+        writer.putString("Detected ");
+        writer.putHexWord(@truncate(num_pci_devices));
+        writer.putString(" PCI devices.\n");
 
-                writer.putString("    Slot: ");
-                writer.putHexByte(usb_device.slot);
-                writer.putLn();
+        var heap = heap_allocator.Heap.new((num_pci_devices * @sizeOf(pci.Device)) / paging.PAGE_SIZE + 1);
+        defer heap.deinit();
+        var pci_devices: [*]pci.Device = @ptrCast(@alignCast(heap.alloc(@sizeOf(pci.Device) * num_pci_devices)));
 
-                writer.putString("    Bus: ");
-                writer.putHexByte(usb_device.bus);
-                writer.putLn();
+        var i: usize = 0;
 
-                writer.putString("    Device ID: ");
-                writer.putHexWord(usb_device.device_id);
-                writer.putLn();
-
-                writer.putString("    Vendor ID: ");
-                writer.putHexWord(usb_device.vendor_id);
-                writer.putLn();
-
-                writer.putString("    Class Code: ");
-                writer.putHexByte(usb_device.class);
-                writer.putLn();
-
-                writer.putString("    Subclass Code: ");
-                writer.putHexByte(usb_device.subclass);
-                writer.putLn();
-
-                writer.putString("    Prog IF: ");
-                writer.putHexByte(usb_device.prog_if);
-                writer.putLn();
-
-                writer.putString("    Revision ID: ");
-                writer.putHexByte(usb_device.revision_id);
-                writer.putLn();
-
-                writer.putString("    Status: ");
-                writer.putHexWord(usb_device.status);
-                writer.putLn();
-
-                writer.putString("    Command Flags: ");
-                writer.putHexWord(usb_device.command_flags);
-                writer.putLn();
-
-                writer.putString("    Header Type: ");
-                writer.putHexByte(usb_device.header_type);
-                writer.putLn();
-
-                writer.putString("    BAR: ");
-                writer.putHexQuad(usb_device.bar);
-                writer.putLn();
-
-                writer.putString("    BAR Size: ");
-                writer.putHexQuad(usb_device.bar_size);
+        // Populate device array with devices
+        for (0..256) |bus| {
+            for (0..256) |slot| {
+                if (pci.deviceExists(@truncate(bus), @truncate(slot))) {
+                    pci_devices[i] = pci.Device.new(@truncate(bus), @truncate(slot));
+                    i += 1;
+                }
             }
         }
-    }
 
-    writer.flush();
+        for (0..num_pci_devices) |j| {
+            writer.putHexWord(pci_devices[j].vendor_id);
+            writer.putLn();
+        }
+
+        // Display back buffer to screen
+        writer.flush();
+    }
+    fullHLT();
+}
+
+fn fullHLT() noreturn {
     while (true) {
         cpu.cli();
         cpu.hlt();

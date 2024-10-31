@@ -3,6 +3,8 @@
 
 const cpu = @import("cpu.zig");
 
+pub const PAGE_SIZE: usize = 0x1000;
+
 // For information on the stucture of PML4Entry, PDPEntry, PDEntry, and PTEntry, please refer to section 5.3.3 of the manual
 // Page Map Level 4 (PML4) Table Entry
 pub const PML4Entry = packed struct(u64) {
@@ -146,7 +148,7 @@ pub fn identityMap(pml4_table: [*]volatile PML4Entry, pml4_entries: usize, pdp_t
     const total_pd_entries: usize = pml4_entries * pdp_entries * pd_entries;
     const total_pt_entries: usize = pml4_entries * pdp_entries * pd_entries * pt_entries;
     for (0..total_pt_entries) |i| {
-        pt_table[i] = PTEntry.new(i * 0x1000, true, false, false, false, false, 0, 0, false);
+        pt_table[i] = PTEntry.new(i * PAGE_SIZE, true, false, false, false, false, 0, 0, false);
     }
     for (0..total_pd_entries) |i| {
         pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8 * 512, true, false, false, false, 0, 0, false);

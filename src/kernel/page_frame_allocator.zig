@@ -98,6 +98,18 @@ pub fn alloc(amnt_pages: usize) usize {
     }
 }
 
+pub fn reserve(addr: usize, amnt_pages: usize) void {
+    const index = addrToBitmapPos(addr);
+    for (index..(index + amnt_pages)) |i| {
+        page_bitmap[i] = 1;
+    }
+}
+
+pub fn reserve_page(addr: usize) void {
+    const index = addrToBitmapPos(addr);
+    page_bitmap[index] = 1;
+}
+
 pub fn free_page(addr: usize) void {
     const index = addrToBitmapPos(addr);
     page_bitmap[index] = 0;
