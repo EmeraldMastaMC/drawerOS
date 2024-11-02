@@ -62,7 +62,7 @@ export fn main() noreturn {
 
         var heap = heap_allocator.Heap.new((num_pci_devices * @sizeOf(pci.Device)) / paging.PAGE_SIZE + 1);
         defer heap.deinit();
-        var pci_devices: [*]pci.Device = @ptrCast(@alignCast(heap.alloc(@sizeOf(pci.Device) * num_pci_devices)));
+        var pci_devices: [*]pci.Device = @ptrCast(@alignCast(heap.alloc(@sizeOf(pci.Device) * num_pci_devices, 16)));
 
         var i: usize = 0;
 
