@@ -79,6 +79,8 @@ export fn main() noreturn {
         for (0..num_pci_devices) |j| {
             writer.putHexWord(pci_devices[j].vendor_id);
             writer.putLn();
+            writer.putHexQuad(pci_devices[j].bar_size);
+            writer.putLn();
         }
 
         // Display back buffer to screen
