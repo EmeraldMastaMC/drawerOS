@@ -29,6 +29,8 @@ const OperationalRegisters = packed struct {
     reserved1: u128,
     device_context_base_address_array_pointer: u64,
     configure: u32,
+    reserved2: [964]u8 = [_]u8{0} ** 964,
+    port_register_sets: [256]PortRegisterSet,
 };
 
 const PortRegisterSet = packed struct {
