@@ -401,16 +401,16 @@ const Configure = packed struct {
 
 const PortRegisterSet = packed struct {
     // Port Status and Control (PORTSC)
-    portsc: u32,
+    portsc: PortStatusControl,
 
     // Port Power Management Status and Control (PORTPMSC)
-    portpmsc: u32,
+    portpmsc: PowerManagementPortStatusControl,
 
     // Port Link Info (PORTLI)
-    portli: u32,
+    portli: PortLinkInformation,
 
     // Port Hardware LPM Control (PORTHLPMC)
-    porthlpmc: u32,
+    porthlpmc: PortHardwareLPMControl,
 };
 
 const PortStatusControl = packed struct {
@@ -511,4 +511,476 @@ const PortIndicatorControl = enum(u2) {
     amber = 1,
     green = 2,
     undefined0 = 3,
+};
+
+const PowerManagementPortStatusControlUSB2 = packed struct {
+    // L1 Status
+    l1_status: L1Status, // RO
+
+    // Remote Wake Enable
+    remote_wake_enable: bool, // R/W
+
+    // Host Initiated Resume Duration
+    // Real duration is host_initiated_resume_duration * 75 + 50
+    host_initiated_resume_duration: u4, // R/W
+
+    // L1 Device Slot
+    l1_device_slot: u8, // R/W
+
+    // Hardware LPM Enable
+    hardware_lpm_enable: bool, // R/W
+
+    // Reserved and Preserved
+    resvpresv: u11, // R/W
+
+    // Port Test Control
+    port_test_control: u4, // R/W
+};
+
+const L1Status = enum(u3) {
+    invalid = 0,
+    success = 1,
+    not_yet = 2,
+    not_supported = 3,
+    timeout_error = 4,
+    resv0 = 5,
+    resv1 = 6,
+    resv2 = 7,
+};
+
+const PowerManagementPortStatusControlUSB3 = packed struct {
+    // U1 Timeout
+    u1_timeout: u8, // R/W
+
+    // U2 Timeout
+    u2_timeout: u8, // R/W
+
+    // Force Link PM Accept
+    force_link_pm_accept: bool, // R/W
+
+    // Reserved and Preserved
+    resvpresv: u15, // R/W
+};
+
+const PowerManagementPortStatusControl = packed union {
+    usb2: PowerManagementPortStatusControlUSB2,
+    usb3: PowerManagementPortStatusControlUSB3,
+};
+
+const PortLinkInformationUSB2 = packed struct {
+    // Reserved and Preserved
+    resvpresv: u32, // R/W
+};
+
+const PortLinkInformationUSB3 = packed struct {
+    // Link Error Count
+    link_error_count: u16, // RO
+
+    // Rx Lane Count (RLC)
+    rlc: u4, // RO
+
+    // Tx Lane Count (TLC)
+    tlc: u4, // RO
+
+    // Reserved and Preserved
+    resvpresv: u8, // R/W
+};
+
+const PortLinkInformation = packed union {
+    usb2: PortLinkInformationUSB2,
+    usb3: PortLinkInformationUSB3,
+};
+
+const PortHardwareLPMControlUSB2 = packed struct {
+    // Host Initiated Resume Duration Mode (HIRDM)
+    hirdm: u2, // RWS
+
+    // L1 Timeout
+    // Real Timeout calculated by l1_timeout * 256 microsecond
+    l1_timeout: u8, // RWS
+
+    // Best Effort Service Latency Deep (BESLD)
+    besld: u4, // RWS
+
+    // Reserved and Preserved
+    resvpresv: u18, // R/W
+};
+
+const PortHardwareLPMControlUSB3 = packed struct {
+    // Reserved and Preserved
+    resvpresv: u32, // R/W
+};
+
+const PortHardwareLPMControl = packed union {
+    usb2: PortHardwareLPMControlUSB2,
+    usb3: PortHardwareLPMControlUSB3,
+};
+
+const HostRuntimeRegisterSet = packed struct {
+    // Microframe Index Register
+    microframe_index_register: u32,
+
+    // Reserved and Zero'd
+    resvzrd: [28]u8,
+
+    // Interrupter Register Sets 0-1023
+    // Actual Size Varies, so this array will overlap with other structs, BE CAREFUL
+    // Actual size is HcsParams1.max_intrs
+    interrupter_register_sets: [1024]InterrupterRegisterSet,
+};
+
+const InterrupterRegisterSet = packed struct {
+    // Interrupter Management Register
+    interrupter_management_register: InterrupterManagement, // R/W
+
+    // Interrupter Moderation
+    interrupter_moderation: InterrupterModeration, // R/W
+
+    // Event Ring Segment Table Size
+    event_ring_segment_table_size: EventRingSegmentTableSize, // R/W
+
+    // Reserved and Preserved
+    resvpresv: u32, // R/W
+
+    // Event Ring Segment Table Base Address
+    event_ring_segment_table_base_address: EventRingSegmentTableBaseAddress, // R/W
+
+    // Event Ring Dequeue Pointer
+    event_ring_dequeue_pointer: u64, // R/W
+};
+
+const InterrupterManagement = packed struct {
+    // Interrupt Pending (IP)
+    ip: bool, // R/WC
+
+    // Interrupt Enable
+    interrupt_enable: bool, // R/W
+
+    // Reserved and Preserved
+    resvpresv: u30, // R/W
+};
+
+const InterrupterModeration = packed struct {
+    // Interrupt Moderation Interval
+    // Interrupts per second = 1 / (250*10^(-9) * interrupt_moderation_interval)
+    interrupt_moderation_interval: u16, // R/W
+
+    // Interrupt Moderation Counter
+    interrupt_moderation_counter: u16, // R/W
+};
+
+const EventRingSegmentTableSize = packed struct {
+    // Event Ring Segment Table Size
+    event_ring_segment_table_size: u16, // R/W
+
+    // Reserved and Preserved
+    resvpresv: u16, // R/W
+};
+
+const EventRingSegmentTableBaseAddress = packed struct {
+    // Reserved and Preserved
+    resvpresv: u6, // R/W
+
+    // Event Ring Segement Table Base Address
+    // Actual address = event_ring_segment_table_base_address << 6
+    event_ring_segment_table_base_address: u58,
+};
+
+const EventRingDequeuePointer = packed struct {
+    // Dequeue ERST Segment Index
+    dequeue_erst_segment_index: u3, // R/W
+
+    // Event Handler Busy
+    event_handler_busy: bool, // R/WC
+
+    // Event Ring Dequeue Pointer
+    // Actual address = event_ring_segment_table_base_address << 4
+    event_ring_dequeue_pointer: u60, // R/W
+};
+
+const DoorbellRegisterSet = packed struct {
+    // Command Doorbell Register
+    command_doorbell: CommandDoorbell,
+
+    // Device Slot Doorbells
+    // Size is actually MaxSlots - 1, so this will overlap with another struct. BE CAREFUL
+    device_slot_doorbells: [255]DeviceSlotDoorbell,
+};
+
+const CommandDoorbell = packed struct {
+    // Target
+    target: DoorbellTarget, // R/W
+
+    // Reserved and Zero'd
+    resvzrd: u24, // R/W
+};
+
+const DeviceSlotDoorbell = packed struct {
+    // Target
+    target: DoorbellTarget, // R/W
+
+    // Reserved and Zero'd
+    resvzrd: u8, // R/W
+
+    // Doorbell Stream ID
+    doorbell_stream_id: u16, // R/W
+};
+
+const DoorbellTarget = enum(u8) {
+    reserved_for_command_doorbell = 0,
+    control_endpoint_enqueue_pointer_update = 1,
+    endpoint1_out_enqueue_pointer_update = 2,
+    endpoint1_in_enqueue_pointer_update = 3,
+    endpoint2_out_enqueue_pointer_update = 4,
+    endpoint2_in_enqueue_pointer_update = 5,
+    endpoint3_out_enqueue_pointer_update = 6,
+    endpoint3_in_enqueue_pointer_update = 7,
+    endpoint4_out_enqueue_pointer_update = 8,
+    endpoint4_in_enqueue_pointer_update = 9,
+    endpoint5_out_enqueue_pointer_update = 10,
+    endpoint5_in_enqueue_pointer_update = 11,
+    endpoint6_out_enqueue_pointer_update = 12,
+    endpoint6_in_enqueue_pointer_update = 13,
+    endpoint7_out_enqueue_pointer_update = 14,
+    endpoint7_in_enqueue_pointer_update = 15,
+    endpoint8_out_enqueue_pointer_update = 16,
+    endpoint8_in_enqueue_pointer_update = 17,
+    endpoint9_out_enqueue_pointer_update = 18,
+    endpoint9_in_enqueue_pointer_update = 19,
+    endpoint10_out_enqueue_pointer_update = 20,
+    endpoint10_in_enqueue_pointer_update = 21,
+    endpoint11_out_enqueue_pointer_update = 22,
+    endpoint11_in_enqueue_pointer_update = 23,
+    endpoint12_out_enqueue_pointer_update = 24,
+    endpoint12_in_enqueue_pointer_update = 25,
+    endpoint13_out_enqueue_pointer_update = 26,
+    endpoint13_in_enqueue_pointer_update = 27,
+    endpoint14_out_enqueue_pointer_update = 28,
+    endpoint14_in_enqueue_pointer_update = 29,
+    endpoint15_out_enqueue_pointer_update = 30,
+    endpoint15_in_enqueue_pointer_update = 31,
+    resv0 = 32,
+    resv1 = 33,
+    resv2 = 34,
+    resv3 = 35,
+    resv4 = 36,
+    resv5 = 37,
+    resv6 = 38,
+    resv7 = 39,
+    resv8 = 40,
+    resv9 = 41,
+    resv10 = 42,
+    resv11 = 43,
+    resv12 = 44,
+    resv13 = 45,
+    resv14 = 46,
+    resv15 = 47,
+    resv16 = 48,
+    resv17 = 49,
+    resv18 = 50,
+    resv19 = 51,
+    resv20 = 52,
+    resv21 = 53,
+    resv22 = 54,
+    resv23 = 55,
+    resv24 = 56,
+    resv25 = 57,
+    resv26 = 58,
+    resv27 = 59,
+    resv28 = 60,
+    resv29 = 61,
+    resv30 = 62,
+    resv31 = 63,
+    resv32 = 64,
+    resv33 = 65,
+    resv34 = 66,
+    resv35 = 67,
+    resv36 = 68,
+    resv37 = 69,
+    resv38 = 70,
+    resv39 = 71,
+    resv40 = 72,
+    resv41 = 73,
+    resv42 = 74,
+    resv43 = 75,
+    resv44 = 76,
+    resv45 = 77,
+    resv46 = 78,
+    resv47 = 79,
+    resv48 = 80,
+    resv49 = 81,
+    resv50 = 82,
+    resv51 = 83,
+    resv52 = 84,
+    resv53 = 85,
+    resv54 = 86,
+    resv55 = 87,
+    resv56 = 88,
+    resv57 = 89,
+    resv58 = 90,
+    resv59 = 91,
+    resv60 = 92,
+    resv61 = 93,
+    resv62 = 94,
+    resv63 = 95,
+    resv64 = 96,
+    resv65 = 97,
+    resv66 = 98,
+    resv67 = 99,
+    resv68 = 100,
+    resv69 = 101,
+    resv70 = 102,
+    resv71 = 103,
+    resv72 = 104,
+    resv73 = 105,
+    resv74 = 106,
+    resv75 = 107,
+    resv76 = 108,
+    resv77 = 109,
+    resv78 = 110,
+    resv79 = 111,
+    resv80 = 112,
+    resv81 = 113,
+    resv82 = 114,
+    resv83 = 115,
+    resv84 = 116,
+    resv85 = 117,
+    resv86 = 118,
+    resv87 = 119,
+    resv88 = 120,
+    resv89 = 121,
+    resv90 = 122,
+    resv91 = 123,
+    resv92 = 124,
+    resv93 = 125,
+    resv94 = 126,
+    resv95 = 127,
+    resv96 = 128,
+    resv97 = 129,
+    resv98 = 130,
+    resv99 = 131,
+    resv100 = 132,
+    resv101 = 133,
+    resv102 = 134,
+    resv103 = 135,
+    resv104 = 136,
+    resv105 = 137,
+    resv106 = 138,
+    resv107 = 139,
+    resv108 = 140,
+    resv109 = 141,
+    resv110 = 142,
+    resv111 = 143,
+    resv112 = 144,
+    resv113 = 145,
+    resv114 = 146,
+    resv115 = 147,
+    resv116 = 148,
+    resv117 = 149,
+    resv118 = 150,
+    resv119 = 151,
+    resv120 = 152,
+    resv121 = 153,
+    resv122 = 154,
+    resv123 = 155,
+    resv124 = 156,
+    resv125 = 157,
+    resv126 = 158,
+    resv127 = 159,
+    resv128 = 160,
+    resv129 = 161,
+    resv130 = 162,
+    resv131 = 163,
+    resv132 = 164,
+    resv133 = 165,
+    resv134 = 166,
+    resv135 = 167,
+    resv136 = 168,
+    resv137 = 169,
+    resv138 = 170,
+    resv139 = 171,
+    resv140 = 172,
+    resv141 = 173,
+    resv142 = 174,
+    resv143 = 175,
+    resv144 = 176,
+    resv145 = 177,
+    resv146 = 178,
+    resv147 = 179,
+    resv148 = 180,
+    resv149 = 181,
+    resv150 = 182,
+    resv151 = 183,
+    resv152 = 184,
+    resv153 = 185,
+    resv154 = 186,
+    resv155 = 187,
+    resv156 = 188,
+    resv157 = 189,
+    resv158 = 190,
+    resv159 = 191,
+    resv160 = 192,
+    resv161 = 193,
+    resv162 = 194,
+    resv163 = 195,
+    resv164 = 196,
+    resv165 = 197,
+    resv166 = 198,
+    resv167 = 199,
+    resv168 = 200,
+    resv169 = 201,
+    resv170 = 202,
+    resv171 = 203,
+    resv172 = 204,
+    resv173 = 205,
+    resv174 = 206,
+    resv175 = 207,
+    resv176 = 208,
+    resv177 = 209,
+    resv178 = 210,
+    resv179 = 211,
+    resv180 = 212,
+    resv181 = 213,
+    resv182 = 214,
+    resv183 = 215,
+    resv184 = 216,
+    resv185 = 217,
+    resv186 = 218,
+    resv187 = 219,
+    resv188 = 220,
+    resv189 = 221,
+    resv190 = 222,
+    resv191 = 223,
+    resv192 = 224,
+    resv193 = 225,
+    resv194 = 226,
+    resv195 = 227,
+    resv196 = 228,
+    resv197 = 229,
+    resv198 = 230,
+    resv199 = 231,
+    resv200 = 232,
+    resv201 = 233,
+    resv202 = 234,
+    resv203 = 235,
+    resv204 = 236,
+    resv205 = 237,
+    resv206 = 238,
+    resv207 = 239,
+    resv208 = 240,
+    resv209 = 241,
+    resv210 = 242,
+    resv211 = 243,
+    resv212 = 244,
+    resv213 = 245,
+    resv214 = 246,
+    resv215 = 247,
+    vendor0 = 248,
+    vendor1 = 249,
+    vendor2 = 250,
+    vendor3 = 251,
+    vendor4 = 252,
+    vendor5 = 253,
+    vendor6 = 254,
+    vendor7 = 255,
 };
