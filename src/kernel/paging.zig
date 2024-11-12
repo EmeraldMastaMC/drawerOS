@@ -148,16 +148,16 @@ pub fn identityMap(pml4_table: [*]volatile PML4Entry, pml4_entries: usize, pdp_t
     const total_pd_entries: usize = pml4_entries * pdp_entries * pd_entries;
     const total_pt_entries: usize = pml4_entries * pdp_entries * pd_entries * pt_entries;
     for (0..total_pt_entries) |i| {
-        pt_table[i] = PTEntry.new(i * PAGE_SIZE, true, false, false, false, false, 0, 0, false);
+        pt_table[i] = PTEntry.new(i * PAGE_SIZE, true, false, false, true, false, 0, 0, false);
     }
     for (0..total_pd_entries) |i| {
-        pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
+        pd_table[i] = PDEntry.new(@intFromPtr(pt_table) + i * 8 * 512, true, false, false, true, 0, 0, false);
     }
     for (0..total_pdp_entries) |i| {
-        pdp_table[i] = PDPEntry.new(@intFromPtr(pd_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
+        pdp_table[i] = PDPEntry.new(@intFromPtr(pd_table) + i * 8 * 512, true, false, false, true, 0, 0, false);
     }
     for (0..total_pml4_entries) |i| {
-        pml4_table[i] = PML4Entry.new(@intFromPtr(pdp_table) + i * 8 * 512, true, false, false, false, 0, 0, false);
+        pml4_table[i] = PML4Entry.new(@intFromPtr(pdp_table) + i * 8 * 512, true, false, false, true, 0, 0, false);
     }
     load_pml4(pml4_table);
 }

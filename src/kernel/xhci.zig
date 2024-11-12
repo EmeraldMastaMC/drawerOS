@@ -1,9 +1,25 @@
 // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf
 // TODO investigate page 9-8 and M-7 in USB: The Universal Serial Bus by Benjamin David Lunt Third Edition
+// ^ Extended Capabilities List
 const pci = @import("pci.zig");
 const page_allocator = @import("page_frame_allocator.zig");
 const paging = @import("paging.zig");
 
+pub const Controller = struct {
+    capability_registers: *volatile CapabilityRegisters,
+    operational_registers: *volatile OperationalRegisters,
+    port_register_sets: [*]volatile PortRegisterSet,
+    port_register_sets_size: usize,
+    runtime_register_set: *volatile HostRuntimeRegisterSet,
+    interrupter_register_sets: [*]volatile InterrupterRegisterSet,
+    interrupter_register_sets_size: usize,
+    doorbell_register_set: *volatile DoorbellRegisterSet,
+    doorbell_register_set_size: usize,
+
+    // pub fn new(base: *void) Controller {
+    //
+    // }
+};
 // Host Controller Capability Registers
 const CapabilityRegisters = packed struct {
     // Length of Capability Registers

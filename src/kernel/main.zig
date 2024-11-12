@@ -1,4 +1,5 @@
 const idt = @import("idt.zig");
+const apic = @import("apic.zig");
 const irq = @import("irq.zig");
 const cpu = @import("cpu.zig");
 const paging = @import("paging.zig");
@@ -41,6 +42,9 @@ export fn main() noreturn {
     idt.entry(32, @as(usize, @intFromPtr(&irq.irq32)));
     idt.load();
     raw_writer.putString("Done.\n");
+
+    apic.enable();
+    allocator.reserve(apic.getAPICBase(), 1);
 
     // Use a writer that depends on interrupts to function.
     const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));

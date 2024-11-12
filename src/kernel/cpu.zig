@@ -45,14 +45,13 @@ pub const msr = struct {
     }
 
     pub inline fn read(register: usize) u64 {
-        const lo: u32 = undefined;
-        const hi: u32 = undefined;
+        var lo: u32 = undefined;
+        var hi: u32 = undefined;
 
         asm volatile ("rdmsr"
-            :
-            : [register] "{ecx}" (register),
-              [value_low] "={eax}" (lo),
+            : [value_low] "={eax}" (lo),
               [value_high] "={edx}" (hi),
+            : [register] "{ecx}" (register),
         );
 
         return (@as(usize, hi) << 32) | lo;
