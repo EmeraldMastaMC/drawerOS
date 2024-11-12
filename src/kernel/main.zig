@@ -39,12 +39,12 @@ export fn main() noreturn {
 
     // Load IRQ 32 with a function, and then load the IDT.
     raw_writer.putString("Loading Interrupt Descriptor Table...\n");
-    idt.entry(32, @as(usize, @intFromPtr(&irq.irq32)));
+    idt.initEntries();
     idt.load();
     raw_writer.putString("Done.\n");
 
-    apic.enable();
-    allocator.reserve(apic.getAPICBase(), 1);
+    // apic.enable();
+    // allocator.reserve(apic.getAPICBase(), 1);
 
     // Use a writer that depends on interrupts to function.
     const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
