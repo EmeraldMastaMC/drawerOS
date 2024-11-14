@@ -13,6 +13,8 @@ const CHANNEL_2 = 0x80;
 const READ_BACK_COMMAND = 0xC0;
 
 const LATCH_COUNT_VALUE: u8 = 0x00;
+const DONT_LATCH_COUNT_VALUE: u8 = 0x20;
+
 const LO_BYTE_ACCESS_MODE: u8 = 0x10;
 const HI_BYTE_ACCESS_MODE: u8 = 0x20;
 const LOHI_BYTE_ACCESS_MODE: u8 = 0x30;
@@ -39,7 +41,7 @@ pub const Channel = enum {
     Three,
 };
 
-pub fn configure(channel: Channel, mode: Mode, target_freq: usize) void {
+pub fn configure(channel: Channel, mode: Mode) void {
     var mode_flag: u8 = undefined;
     mode_flag = switch (mode) {
         Mode.InterruptOnTerminalCount => MODE_INTERRUPT_ON_TERMINAL_COUNT,
@@ -57,33 +59,36 @@ pub fn configure(channel: Channel, mode: Mode, target_freq: usize) void {
         Channel.Three => CHANNEL_2,
     };
 
-    const divisor: u16 = @truncate(FREQUENCY / target_freq);
-
     ports.outb(MODE_COMMAND_PORT, channel_flag | mode_flag | LOHI_BYTE_ACCESS_MODE);
+}
+
+pub fn reloadChannel2(target_freq: usize) void {
+    const divisor: u16 = @truncate(FREQUENCY / target_freq);
     ports.outb(CHANNEL_2_DATA_PORT, @truncate(divisor & 0xFF));
-
     // Small Delay
-    _ = ports.inb(0x60);
-
+    // _ = ports.inb(0x60);
     ports.outb(CHANNEL_2_DATA_PORT, @truncate((divisor >> 8) & 0xFF));
 }
 
-pub fn reset() void {
+pub inline fn reset(target_freq: usize) void {
+    reloadChannel2(target_freq);
     const tmp = ports.inb(GATE_INPUT_PIN_PORT);
     ports.outb(GATE_INPUT_PIN_PORT, tmp & 0xFE);
     ports.outb(GATE_INPUT_PIN_PORT, tmp | 0x01);
 }
 
-pub fn wait() void {
-    // if bit 5 is not set, wait
-    while ((ports.inb(GATE_INPUT_PIN_PORT) & 0x20) == 0) {
+pub inline fn wait() void {
+    while (timerNotFinished()) {
         cpu.nop();
     }
 }
 
+pub inline fn timerNotFinished() bool {
+    return ((ports.inb(GATE_INPUT_PIN_PORT) & 0x20) >> 5) == 0;
+}
 pub fn delay(cycles: usize) void {
     for (0..cycles) |_| {
-        reset();
+        reset(1000);
         wait();
     }
 }

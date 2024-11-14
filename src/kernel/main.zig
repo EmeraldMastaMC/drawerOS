@@ -47,8 +47,6 @@ export fn main() noreturn {
     // apic.enable();
     // allocator.reserve(apic.getAPICBase(), 1);
 
-    pit.configure(pit.Channel.Two, pit.Mode.OneShot, 1000);
-
     // Use a writer that depends on interrupts to function.
     const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
     defer allocator.free(@intFromPtr(back_buffer), 10);
@@ -94,10 +92,11 @@ export fn main() noreturn {
         writer.flush();
     }
 
+    pit.configure(pit.Channel.Two, pit.Mode.OneShot);
     while (true) {
+        pit.delay(1000);
         writer.putString("Test.\n");
         writer.flush();
-        pit.delay(1000);
     }
     fullHLT();
 }
