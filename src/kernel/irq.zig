@@ -45,6 +45,7 @@ pub fn irq255() callconv(.Naked) void {
         \\ movw %ax, %ds
         \\ movw %ax, %es
         \\ cld
+        \\ call eoi
         \\ pop %rax
         \\ movq %rax, %es
         \\ pop %rax

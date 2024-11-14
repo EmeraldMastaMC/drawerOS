@@ -49,7 +49,12 @@ pub fn setRegister(offset: usize, data: u32) void {
     const addr: *volatile u32 = @ptrFromInt(getAPICBase() + offset);
     addr.* = data;
 }
+
 pub fn getRegister(offset: usize) void {
     const addr: *volatile u32 = @ptrFromInt(getAPICBase() + offset);
     return addr.*;
+}
+
+export fn eoi() void {
+    setRegister(EOI_REGISTER, 0);
 }
