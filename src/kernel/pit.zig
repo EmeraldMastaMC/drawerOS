@@ -1,11 +1,13 @@
 const ports = @import("ports.zig");
 const cpu = @import("cpu.zig");
+const console = @import("console.zig");
+const allocator = @import("page_frame_allocator.zig");
 const CHANNEL_0_DATA_PORT: u16 = 0x40; // R/W
 const CHANNEL_1_DATA_PORT: u16 = 0x41; // R/W
 const CHANNEL_2_DATA_PORT: u16 = 0x42; // R/W
 const MODE_COMMAND_PORT: u16 = 0x43; // WO
 const GATE_INPUT_PIN_PORT: u16 = 0x61; // R/W
-const FREQUENCY: u32 = 1193183; // MHz
+const FREQUENCY: u32 = 1193183; // Hz
 
 const CHANNEL_0 = 0x00;
 const CHANNEL_1 = 0x40;
@@ -36,9 +38,9 @@ pub const Mode = enum {
 };
 
 pub const Channel = enum {
+    Zero,
     One,
     Two,
-    Three,
 };
 
 pub fn configure(channel: Channel, mode: Mode) void {
@@ -54,41 +56,43 @@ pub fn configure(channel: Channel, mode: Mode) void {
 
     var channel_flag: u8 = undefined;
     channel_flag = switch (channel) {
-        Channel.One => CHANNEL_0,
-        Channel.Two => CHANNEL_1,
-        Channel.Three => CHANNEL_2,
+        Channel.Zero => CHANNEL_0,
+        Channel.One => CHANNEL_1,
+        Channel.Two => CHANNEL_2,
     };
+
+    if (channel_flag == CHANNEL_2) {
+        ports.outb(GATE_INPUT_PIN_PORT, (ports.inb(GATE_INPUT_PIN_PORT) & 0xFD) | 1);
+    }
 
     ports.outb(MODE_COMMAND_PORT, channel_flag | mode_flag | LOHI_BYTE_ACCESS_MODE);
 }
 
-pub fn reloadChannel2(target_freq: usize) void {
+fn reloadChannel2(target_freq: usize) void {
     const divisor: u16 = @truncate(FREQUENCY / target_freq);
     ports.outb(CHANNEL_2_DATA_PORT, @truncate(divisor & 0xFF));
-    // Small Delay
-    // _ = ports.inb(0x60);
-    ports.outb(CHANNEL_2_DATA_PORT, @truncate((divisor >> 8) & 0xFF));
+    ports.outb(CHANNEL_2_DATA_PORT, @truncate(((divisor & 0xFF00) >> 8)));
 }
 
-pub inline fn reset(target_freq: usize) void {
-    reloadChannel2(target_freq);
+pub inline fn resetChannel2() void {
     const tmp = ports.inb(GATE_INPUT_PIN_PORT);
     ports.outb(GATE_INPUT_PIN_PORT, tmp & 0xFE);
-    ports.outb(GATE_INPUT_PIN_PORT, tmp | 0x01);
+    ports.outb(GATE_INPUT_PIN_PORT, tmp | 1);
 }
 
-pub inline fn wait() void {
-    while (timerNotFinished()) {
-        cpu.nop();
-    }
+pub inline fn poll() u8 {
+    return (ports.inb(GATE_INPUT_PIN_PORT) & 0x20) >> 5;
 }
 
-pub inline fn timerNotFinished() bool {
-    return ((ports.inb(GATE_INPUT_PIN_PORT) & 0x20) >> 5) == 0;
+pub fn setFrequency(frequency: usize) void {
+    reloadChannel2(frequency);
 }
 pub fn delay(cycles: usize) void {
-    for (0..cycles) |_| {
-        reset(1000);
-        wait();
+    var counter: usize = 0;
+    while (counter != cycles) {
+        if (poll() == 1) {
+            counter += 1;
+            resetChannel2();
+        }
     }
 }

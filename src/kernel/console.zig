@@ -1,4 +1,5 @@
 const ports = @import("ports.zig");
+const math = @import("math.zig");
 const VIDEO_MEMORY: [*]volatile u16 = @ptrFromInt(0xB8000);
 const VGA_WIDTH = 80;
 const VGA_HEIGHT = 25;
@@ -111,6 +112,57 @@ pub const Writer = struct {
                 self.updateCursor();
             }
         }
+    }
+
+    pub fn putNum(self: *volatile Writer, num: u64) void {
+        if (num == 0) {
+            self.putChar('0');
+            return;
+        }
+        var num_digits: usize = 0;
+
+        // Calculate the number of digits
+        var tmp_num = num;
+        while (tmp_num != 0) {
+            num_digits += 1;
+            tmp_num /= 10;
+        }
+
+        // Print Digits
+        tmp_num = num;
+        var current_digit = num_digits;
+        while (current_digit != 1) {
+            const digit = tmp_num / (math.pow(10, current_digit - 1));
+            self.putChar(switch (digit) {
+                0 => '0',
+                1 => '1',
+                2 => '2',
+                3 => '3',
+                4 => '4',
+                5 => '5',
+                6 => '6',
+                7 => '7',
+                8 => '8',
+                9 => '9',
+                else => 'X',
+            });
+            tmp_num -= (digit * math.pow(10, current_digit - 1));
+            current_digit -= 1;
+        }
+        const digit = tmp_num % 10;
+        self.putChar(switch (digit) {
+            0 => '0',
+            1 => '1',
+            2 => '2',
+            3 => '3',
+            4 => '4',
+            5 => '5',
+            6 => '6',
+            7 => '7',
+            8 => '8',
+            9 => '9',
+            else => 'X',
+        });
     }
     pub fn putHexQuad(self: *volatile Writer, num: u64) void {
         var hex = num;
@@ -373,6 +425,56 @@ pub const RawWriter = struct {
                 self.updateCursor();
             }
         }
+    }
+    pub fn putNum(self: *volatile RawWriter, num: u64) void {
+        if (num == 0) {
+            self.putChar('0');
+            return;
+        }
+        var num_digits: usize = 0;
+
+        // Calculate the number of digits
+        var tmp_num = num;
+        while (tmp_num != 0) {
+            num_digits += 1;
+            tmp_num /= 10;
+        }
+
+        // Print Digits
+        tmp_num = num;
+        var current_digit = num_digits;
+        while (current_digit != 1) {
+            const digit = tmp_num / (math.pow(10, current_digit - 1));
+            self.putChar(switch (digit) {
+                0 => '0',
+                1 => '1',
+                2 => '2',
+                3 => '3',
+                4 => '4',
+                5 => '5',
+                6 => '6',
+                7 => '7',
+                8 => '8',
+                9 => '9',
+                else => 'X',
+            });
+            tmp_num -= (digit * math.pow(10, current_digit - 1));
+            current_digit -= 1;
+        }
+        const digit = tmp_num % 10;
+        self.putChar(switch (digit) {
+            0 => '0',
+            1 => '1',
+            2 => '2',
+            3 => '3',
+            4 => '4',
+            5 => '5',
+            6 => '6',
+            7 => '7',
+            8 => '8',
+            9 => '9',
+            else => 'X',
+        });
     }
     pub fn putHex(self: *RawWriter, num: u64) void {
         var hex = num;

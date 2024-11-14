@@ -44,10 +44,15 @@ export fn main() noreturn {
     idt.load();
     raw_writer.putString("Done.\n");
 
+    raw_writer.putString("Initializing Programmable Interval Timer\n");
+    pit.configure(pit.Channel.Two, pit.Mode.OneShot);
+    raw_writer.putString("Done.\n");
     // apic.enable();
     // allocator.reserve(apic.getAPICBase(), 1);
 
     // Use a writer that depends on interrupts to function.
+    pit.setFrequency(1000);
+    pit.delay(1000);
     const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
     defer allocator.free(@intFromPtr(back_buffer), 10);
     var writer = console.Writer.new(colors.White, colors.Black, back_buffer);
@@ -56,47 +61,47 @@ export fn main() noreturn {
     writer.setColors(colors.LightGreen, colors.Black);
     writer.putString("Welcome to DrawerOS!\n");
     writer.setColors(colors.White, colors.Black);
-    writer.putLn();
 
-    {
-        const num_pci_devices = pci.numDevices();
+    // {
+    //     const num_pci_devices = pci.numDevices();
+    //
+    //     writer.putString("Detected ");
+    //     writer.putHexWord(@truncate(num_pci_devices));
+    //     writer.putString(" PCI devices.\n");
+    //
+    //     var heap = heap_allocator.Heap.new((num_pci_devices * @sizeOf(pci.Device)) / paging.PAGE_SIZE + 1);
+    //     defer heap.deinit();
+    //     var pci_devices: [*]pci.Device = @ptrCast(@alignCast(heap.alloc(@sizeOf(pci.Device) * num_pci_devices, 16)));
+    //
+    //     var i: usize = 0;
+    //
+    //     // Populate device array with devices
+    //     for (0..256) |bus| {
+    //         for (0..256) |slot| {
+    //             if (pci.deviceExists(@truncate(bus), @truncate(slot))) {
+    //                 pci_devices[i] = pci.Device.new(@truncate(bus), @truncate(slot));
+    //                 i += 1;
+    //             }
+    //         }
+    //     }
+    //
+    //     for (0..num_pci_devices) |j| {
+    //         writer.putHexWord(pci_devices[j].vendor_id);
+    //         writer.putLn();
+    //         writer.putHexQuad(pci_devices[j].bar_size);
+    //         writer.putLn();
+    //     }
+    //
+    //     // Display back buffer to screen
+    //     writer.flush();
+    // }
 
-        writer.putString("Detected ");
-        writer.putHexWord(@truncate(num_pci_devices));
-        writer.putString(" PCI devices.\n");
-
-        var heap = heap_allocator.Heap.new((num_pci_devices * @sizeOf(pci.Device)) / paging.PAGE_SIZE + 1);
-        defer heap.deinit();
-        var pci_devices: [*]pci.Device = @ptrCast(@alignCast(heap.alloc(@sizeOf(pci.Device) * num_pci_devices, 16)));
-
-        var i: usize = 0;
-
-        // Populate device array with devices
-        for (0..256) |bus| {
-            for (0..256) |slot| {
-                if (pci.deviceExists(@truncate(bus), @truncate(slot))) {
-                    pci_devices[i] = pci.Device.new(@truncate(bus), @truncate(slot));
-                    i += 1;
-                }
-            }
-        }
-
-        for (0..num_pci_devices) |j| {
-            writer.putHexWord(pci_devices[j].vendor_id);
-            writer.putLn();
-            writer.putHexQuad(pci_devices[j].bar_size);
-            writer.putLn();
-        }
-
-        // Display back buffer to screen
+    pit.setFrequency(1000);
+    for (1..10000) |i| {
+        writer.putLn();
+        writer.putNum(i);
         writer.flush();
-    }
-
-    pit.configure(pit.Channel.Two, pit.Mode.OneShot);
-    while (true) {
         pit.delay(1000);
-        writer.putString("Test.\n");
-        writer.flush();
     }
     fullHLT();
 }
