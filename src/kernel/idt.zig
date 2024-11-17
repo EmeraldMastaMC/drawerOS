@@ -1,6 +1,7 @@
 const cpu = @import("cpu.zig");
 const irq = @import("irq.zig");
 const ports = @import("ports.zig");
+const paging = @import("paging.zig");
 
 // See section 4.6.5 of the manual for information regarding the Interrupt Descriptor Table
 //
@@ -92,8 +93,8 @@ pub inline fn initEntries() void {
     entry(29, @as(usize, @intFromPtr(&irq.irq255)));
     entry(30, @as(usize, @intFromPtr(&irq.irq255)));
     entry(31, @as(usize, @intFromPtr(&irq.irq255)));
-    entry(32, @as(usize, @intFromPtr(&irq.irq32)));
-    entry(33, @as(usize, @intFromPtr(&irq.irq255)));
+    entry(32, @as(usize, @intFromPtr(&irq.irq0)));
+    entry(33, @as(usize, @intFromPtr(&irq.irq1)));
     entry(34, @as(usize, @intFromPtr(&irq.irq255)));
     entry(35, @as(usize, @intFromPtr(&irq.irq255)));
     entry(36, @as(usize, @intFromPtr(&irq.irq255)));

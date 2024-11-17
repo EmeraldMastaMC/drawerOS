@@ -28,7 +28,7 @@ pub fn init() void {
     }
 
     // PT Table
-    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES)) |i| {
+    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 2)) |i| {
         const index = addrToBitmapPos(@intFromPtr(main.PT)) + i;
         page_bitmap[index] |= 1;
     }

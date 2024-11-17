@@ -49,7 +49,16 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
-	@qemu-system-x86_64 -drive file=$(BIN),media=disk,format=raw -d int --enable-kvm -m 4G -device qemu-xhci
+	@qemu-system-x86_64 -device ich9-ahci,id=sata \
+											-drive file=$(BIN),format=raw,media=disk \
+											-d int \
+											-m 4G \
+											-device qemu-xhci \
+											-bios /usr/share/qemu/bios-256k.bin \
+											-machine pc,accel=kvm \
+											-cpu host \
+											-boot order=c \
+
 
 run-nokvm:
 	@echo '[INFO] Running QEMU'

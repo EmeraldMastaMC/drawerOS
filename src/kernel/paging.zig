@@ -162,23 +162,23 @@ pub fn identityMap(pml4_table: [*]volatile PML4Entry, pml4_entries: usize, pdp_t
     load_pml4(pml4_table);
 }
 
-pub fn mapPage(phys_addr: *void, virtual_addr: *void, pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, global: bool, no_execute: bool) void {
+pub fn mapPage(phys_addr: usize, virtual_addr: usize, pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, global: bool, no_execute: bool) void {
 
     // See figure 5-17 in the manual
-    const pml4_index = (@intFromPtr(virtual_addr) >> 39) & 0x1FF;
-    const pdp_index = (@intFromPtr(virtual_addr) >> 30) & 0x1FF;
-    const pd_index = (@intFromPtr(virtual_addr) >> 21) & 0x1FF;
-    const pt_index = (@intFromPtr(virtual_addr) >> 12) & 0x1FF;
+    const pml4_index = (virtual_addr >> 39) & 0x1FF;
+    const pdp_index = (virtual_addr >> 30) & 0x1FF;
+    const pd_index = (virtual_addr >> 21) & 0x1FF;
+    const pt_index = (virtual_addr >> 12) & 0x1FF;
 
     if (pml4_table[pml4_index].base == 0) {
-        pml4_table[pml4_index] = PML4Entry.new(@intFromPtr(pdp_table) + pml4_index * 8, true, false, false, false, 0, 0, false);
+        pml4_table[pml4_index] = PML4Entry.new(@intFromPtr(pdp_table) + pml4_index * 8, true, false, false, true, 0, 0, false);
     }
     if (pdp_table[(pml4_index * 512) + pdp_index].base == 0) {
-        pdp_table[(pml4_index * 512) + pdp_index] = PDPEntry.new(@intFromPtr(pd_table) + pdp_index * 8, true, false, false, false, 0, 0, false);
+        pdp_table[(pml4_index * 512) + pdp_index] = PDPEntry.new(@intFromPtr(pd_table) + pdp_index * 8, true, false, false, true, 0, 0, false);
     }
     if (pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index].base == 0) {
-        pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index] = PDEntry.new(@intFromPtr(pt_table) + pd_index * 8, true, false, false, false, 0, 0, false);
+        pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index] = PDEntry.new(@intFromPtr(pt_table) + pd_index * 8, true, false, false, true, 0, 0, false);
     }
 
-    pt_table[(pml4_index * 512 * 512 * 512) + (pdp_index * 512 * 512) + (pd_index * 512) + pt_index] = PTEntry.new(@intFromPtr(phys_addr), read_write, user_supervisor, write_through, cache_disabled, global, 0, 0, no_execute);
+    pt_table[(pml4_index * 512 * 512 * 512) + (pdp_index * 512 * 512) + (pd_index * 512) + pt_index] = PTEntry.new(phys_addr, read_write, user_supervisor, write_through, cache_disabled, global, 0, 0, no_execute);
 }

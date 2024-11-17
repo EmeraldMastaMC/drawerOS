@@ -28,7 +28,7 @@ pub fn setCursorPosition(column: usize, row: usize) void {
 
 pub fn putCharInterrupt(column: usize, row: usize, color: u16, char: u8) void {
     asm volatile (
-        \\ int $32
+        \\ int $33
         :
         : [column] "{rdi}" (column),
           [row] "{rsi}" (row),
@@ -426,7 +426,7 @@ pub const RawWriter = struct {
             }
         }
     }
-    pub fn putNum(self: *volatile RawWriter, num: u64) void {
+    pub fn putNum(self: *RawWriter, num: u64) void {
         if (num == 0) {
             self.putChar('0');
             return;
