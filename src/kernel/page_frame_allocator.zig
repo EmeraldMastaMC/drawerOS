@@ -28,10 +28,13 @@ pub fn init() void {
     }
 
     // PT Table
-    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 2)) |i| {
+    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 10)) |i| {
         const index = addrToBitmapPos(@intFromPtr(main.PT)) + i;
         page_bitmap[index] |= 1;
     }
+
+    // APIC Mapping
+    page_bitmap[0x4] |= 1;
 
     // Video memory
     page_bitmap[0xb8] |= 1;

@@ -4,6 +4,7 @@
 const cpu = @import("cpu.zig");
 const console = @import("console.zig");
 const allocator = @import("page_frame_allocator.zig");
+const main = @import("main.zig");
 
 pub const PAGE_SIZE: usize = 0x1000;
 
@@ -138,7 +139,7 @@ pub fn load_pml4(base_address: [*]volatile PML4Entry) void {
     const cr3entry = CR3Entry{
         .base_address = @truncate(@intFromPtr(base_address) >> 12),
         .write_through = 0,
-        .cache_disabled = 0,
+        .cache_disabled = 1,
     };
     cpu.cli();
     cpu.cr3.write(@bitCast(cr3entry));
@@ -164,31 +165,38 @@ pub fn identityMap(pml4_table: [*]volatile PML4Entry, pml4_entries: usize, pdp_t
     load_pml4(pml4_table);
 }
 
-pub fn mapPage(phys_addr: usize, virtual_addr: usize, pml4_table: [*]volatile PML4Entry, pdp_table: [*]volatile PDPEntry, pd_table: [*]volatile PDEntry, pt_table: [*]volatile PTEntry, read_write: bool, user_supervisor: bool, write_through: bool, cache_disabled: bool, global: bool, no_execute: bool) void {
+pub fn printIndices(virtual_addr: usize) void {
 
     // See figure 5-17 in the manual
     const pml4_index = (virtual_addr >> 39) & 0x1FF;
     const pdp_index = (virtual_addr >> 30) & 0x1FF;
     const pd_index = (virtual_addr >> 21) & 0x1FF;
     const pt_index = (virtual_addr >> 12) & 0x1FF;
-    const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
-    defer allocator.free(@intFromPtr(back_buffer), 10);
-    var writer = console.Writer.new(console.Color.White, console.Color.Black, back_buffer);
-    writer.putHexQuad(pml4_index);
+    // const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
+    // defer allocator.free(@intFromPtr(back_buffer), 10);
+    // var writer = console.Writer.new(console.Color.White, console.Color.Black, back_buffer);
+    var writer = console.RawWriter.new(console.Color.White, console.Color.Black);
+    writer.putHex(pml4_index);
     writer.putLn();
-    writer.putHexQuad(pdp_index);
+    writer.putHex(pdp_index);
     writer.putLn();
-    writer.putHexQuad(pd_index);
+    writer.putHex(pd_index);
     writer.putLn();
-    writer.putHexQuad(pt_index);
+    writer.putHex(pt_index);
     writer.putLn();
-    writer.flush();
+}
 
-    pml4_table[pml4_index] = PML4Entry.new(@intFromPtr(pdp_table) + (pml4_index * 8 * 512), true, false, false, true, 0, 0, false);
+pub fn mapPage(physical_addr: usize, virtual_addr: usize) void {
+    const pml4_index = (virtual_addr >> 39) & 0x1FF;
+    const pdp_index = (virtual_addr >> 30) & 0x1FF;
+    const pd_index = (virtual_addr >> 21) & 0x1FF;
+    const pt_index = (virtual_addr >> 12) & 0x1FF;
 
-    pdp_table[(pml4_index * 512) + pdp_index] = PDPEntry.new(@intFromPtr(pd_table) + (pml4_index * 8 * 512 * 512) + (pdp_index * 512 * 8), true, false, false, true, 0, 0, false);
+    main.PML4[pml4_index] = PML4Entry.new(@intFromPtr(main.PDP) + (pml4_index * 8 * 512), true, false, false, true, 0, 0, false);
 
-    pd_table[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index] = PDEntry.new(@intFromPtr(pt_table) + (pml4_index * 8 * 512 * 512 * 512) + (pdp_index * 8 * 512 * 512) + (pd_index * 8 * 512), true, false, false, true, 0, 0, false);
+    main.PDP[(pml4_index * 512) + pdp_index] = PDPEntry.new(@intFromPtr(main.PD) + (pml4_index * 8 * 512 * 512) + (pdp_index * 512 * 8), true, false, false, true, 0, 0, false);
 
-    pt_table[(pml4_index * 512 * 512 * 512) + (pdp_index * 512 * 512) + (pd_index * 512) + pt_index] = PTEntry.new(phys_addr, read_write, user_supervisor, write_through, cache_disabled, global, 0, 0, no_execute);
+    main.PD[(pml4_index * 512 * 512) + (pdp_index * 512) + pd_index] = PDEntry.new(@intFromPtr(main.PT) + (pml4_index * 8 * 512 * 512 * 512) + (pdp_index * 8 * 512 * 512) + (pd_index * 8 * 512), true, false, false, true, 0, 0, false);
+
+    main.PT[(pml4_index * 512 * 512 * 512) + (pdp_index * 512 * 512) + (pd_index * 512) + pt_index] = PTEntry.new(physical_addr, true, false, false, true, false, 0, 0, false);
 }

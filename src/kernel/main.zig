@@ -22,39 +22,33 @@ pub const PT_ENTRIES: u64 = 512;
 
 export fn main() noreturn {
     // Use a writer that doesn't depend on interrupts to function.
-    // var raw_writer = console.RawWriter.new(colors.White, colors.Black);
-    // raw_writer.clear();
+    var raw_writer = console.RawWriter.new(colors.White, colors.Black);
+    raw_writer.clear();
 
-    // raw_writer.putString("Identity Mapping 600MiB...\n");
+    raw_writer.putString("Identity Mapping 600MiB...\n");
     paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
-    // raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n");
 
-    // raw_writer.putString("Initializing Page Frame Allocator...\n");
+    raw_writer.putString("Initializing Page Frame Allocator...\n");
     allocator.init();
-    // raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n");
 
-    // raw_writer.putString("Allocating Stack 40KiB...\n");
+    raw_writer.putString("Allocating Stack 40KiB...\n");
     stack.init(allocator.alloc(10));
-    // raw_writer.putString("Done.\n");
-    //
-    // raw_writer.putString("Loading Interrupt Descriptor Table...\n");
+    raw_writer.putString("Done.\n");
+
+    raw_writer.putString("Loading Interrupt Descriptor Table...\n");
     idt.initEntries();
     idt.load();
-    // raw_writer.putString("Done.\n");
-    //
-    // raw_writer.putString("Initializing Programmable Interval Timer\n");
+    raw_writer.putString("Done.\n");
+
+    raw_writer.putString("Initializing Programmable Interval Timer\n");
     pit.configure(pit.Channel.Two, pit.Mode.OneShot);
-    // raw_writer.putString("Done.\n");
-    //
-    // apic.enable();
-    // allocator.reserve(apic.getAPICBase(), 1);
-    //
-    // // Use a writer that depends on interrupts to function.
-    // pit.setFrequency(1000);
-    // pit.delay(1000);
-    //
-    // apic.timerInit(0);
-    //
+    raw_writer.putString("Done.\n");
+
+    apic.enable();
+    apic.setupTimer();
+
     const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
     defer allocator.free(@intFromPtr(back_buffer), 10);
     var writer = console.Writer.new(colors.White, colors.Black, back_buffer);
@@ -99,19 +93,12 @@ export fn main() noreturn {
     //     writer.flush();
     // }
     //
-    // writer.putNum(@as(u64, apic.ticks_in_10ms));
-    // writer.putLn();
-    // writer.flush();
-    // for (1..10000) |_| {
-    //     writer.putLn();
-    //     writer.putLn();
-    //     writer.flush();
-    //     apic.sleep(1);
-    // }
-    fullHLT();
-}
-
-fn fullHLT() noreturn {
+    for (1..60) |i| {
+        writer.putLn();
+        writer.putNum(i);
+        writer.flush();
+        apic.sleep(1000);
+    }
     while (true) {
         cpu.cli();
         cpu.hlt();

@@ -51,39 +51,39 @@ pub fn load() void {
 
     cpu.lidt(@bitCast(idtr));
 
-    // const ICW1_INIT: u8 = 0x10;
-    // const ICW1_ICW4: u8 = 0x01;
-    // const ICW4_8086: u8 = 0x01;
+    const ICW1_INIT: u8 = 0x10;
+    const ICW1_ICW4: u8 = 0x01;
+    const ICW4_8086: u8 = 0x01;
     const PIC1_COMMAND = 0x20;
     const PIC2_COMMAND = 0xA0;
     const PIC1_DATA = PIC1_COMMAND + 1;
     const PIC2_DATA = PIC2_COMMAND + 1;
-    //
+
     // disable 8259PIC
-    // ports.outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
-    // ports.wait();
-    //
-    // ports.outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-    // ports.wait();
-    //
-    // ports.outb(PIC1_DATA, 0x20);
-    // ports.wait();
-    //
-    // ports.outb(PIC2_DATA, 0x28);
-    // ports.wait();
-    //
-    // ports.outb(PIC1_DATA, 0x4);
-    // ports.wait();
-    //
-    // ports.outb(PIC2_DATA, 0x2);
-    // ports.wait();
-    //
-    // ports.outb(PIC1_DATA, ICW4_8086);
-    // ports.wait();
-    //
-    // ports.outb(PIC2_DATA, ICW4_8086);
-    // ports.wait();
-    //
+    ports.outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+    ports.wait();
+
+    ports.outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+    ports.wait();
+
+    ports.outb(PIC1_DATA, 0x20);
+    ports.wait();
+
+    ports.outb(PIC2_DATA, 0x28);
+    ports.wait();
+
+    ports.outb(PIC1_DATA, 0x4);
+    ports.wait();
+
+    ports.outb(PIC2_DATA, 0x2);
+    ports.wait();
+
+    ports.outb(PIC1_DATA, ICW4_8086);
+    ports.wait();
+
+    ports.outb(PIC2_DATA, ICW4_8086);
+    ports.wait();
+
     ports.outb(PIC1_DATA, 0xFF);
     ports.outb(PIC2_DATA, 0xFF);
 
