@@ -50,12 +50,15 @@ clean:
 
 run:
 	@echo '[INFO] Running QEMU'
-	@qemu-system-x86_64 \
+	@qemu-system-x86_64 -device ich9-ahci,id=sata \
 											-drive file=$(BIN),format=raw,media=disk \
 											-d int \
 											-m 4G \
 											-device qemu-xhci \
-											-machine pc,accel=kvm \
+											-bios /usr/share/qemu/bios-256k.bin \
+											-machine q35,accel=kvm \
+											-cpu host \
+											-boot order=c \
 
 
 run-nokvm:
