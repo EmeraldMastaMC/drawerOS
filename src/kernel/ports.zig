@@ -73,3 +73,7 @@ pub inline fn inq(port: u16) u64 {
     );
     return result;
 }
+
+pub inline fn wait() void {
+    outb(0x80, 0);
+}

@@ -24,6 +24,7 @@ $(BIN): $(OBJS)
 	@find $(OBJ_DIR) -type f -name '*.o.o' -delete
 	@$(LINKER) $^ -o $@
 	@echo '[LD] $^'
+	@truncate -s515585 $(BIN)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
@@ -55,7 +56,7 @@ run:
 											-m 4G \
 											-device qemu-xhci \
 											-bios /usr/share/qemu/bios-256k.bin \
-											-machine pc,accel=kvm \
+											-machine q35,accel=kvm \
 											-cpu host \
 											-boot order=c \
 

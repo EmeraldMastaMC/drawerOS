@@ -41,10 +41,20 @@ pub const TIMER_MODE_PERIODIC: u32 = 0x20000;
 pub const TIMER_MODE_TSC_DEADLINE: u32 = 0x40000;
 pub const TIMER_MASK: u32 = 0x10000;
 
-pub var ticks_in_10ms: u32 = 0;
+var time_in_ms: u32 = 0;
+var APIC_VIRT_BASE: u64 = 0;
 pub fn getAPICBase() usize {
-    const val: u64 = (cpu.msr.read(IA32_APIC_BASE_MSR) & 0xFFFFFFFFFFFFF000) >> 12;
+    // const val: u64 = (cpu.msr.read(IA32_APIC_BASE_MSR) & 0xFFFFFFFFFFFFF000) >> 12;
+    const val: u64 = 0xFEE00000;
     return val;
+}
+
+pub fn getAPICVirtBase() usize {
+    return APIC_VIRT_BASE;
+}
+
+pub fn createAPICVirtBase() void {
+    APIC_VIRT_BASE = allocator.alloc(1);
 }
 
 fn setAPICBase(addr: usize) void {
@@ -52,10 +62,24 @@ fn setAPICBase(addr: usize) void {
 }
 
 pub fn enable() void {
-    const addr = getAPICBase();
-    paging.mapPage(addr, addr, main.PML4, main.PDP, main.PD, main.PT, true, false, false, true, false, false);
-    setAPICBase(addr);
-    setRegister(SPURIOUS_INTERRUPT_VECTOR_REGISTER, (getRegister(SPURIOUS_INTERRUPT_VECTOR_REGISTER) & 0xFFFFFF00) | 39);
+    createAPICVirtBase();
+    // paging.mapPage(0xb8000, getAPICVirtBase(), main.PML4, main.PDP, main.PD, main.PT, true, false, false, true, false, false);
+
+    // const real_addr: [*]u16 = @ptrFromInt(getAPICVirtBase());
+    // real_addr[0] = 0xFF00;
+    // setRegister(DESTINATION_FORMAT_REGISTER, 0xFFFFFFFF);
+    // setRegister(LOGICAL_DESTINATION_REGISTER, (getRegister(LOGICAL_DESTINATION_REGISTER) & 0x00FFFFFF) | 1);
+    // setRegister(LVT_TIMER_REGISTER, TIMER_MASK);
+    // setRegister(LVT_PERFORMANCE_MONITORING_COUNTERS_REGISTER, 4 << 8);
+    // setRegister(LVT_LINT0_REGISTER, TIMER_MASK);
+    // setRegister(LVT_LINT1_REGISTER, TIMER_MASK);
+    // setRegister(TASK_PRIORITY_REGISTER, 0);
+    //
+    // cpu.msr.write(IA32_APIC_BASE_MSR, cpu.msr.read(IA32_APIC_BASE_MSR) | 0x800);
+    //
+    // setRegister(SPURIOUS_INTERRUPT_VECTOR_REGISTER, 39 | 0x100);
+    // setRegister(LVT_TIMER_REGISTER, 32);
+    // setRegister(DIVIDE_CONFIGURATION_REGISTER, 0x03);
 }
 
 pub fn setRegister(offset: usize, data: u32) void {
@@ -68,33 +92,26 @@ pub fn getRegister(offset: usize) u32 {
     return addr.*;
 }
 
-pub fn timerSetup(irq: u8) void {
-    setRegister(LVT_TIMER_REGISTER, getRegister(LVT_TIMER_REGISTER) | TIMER_MASK);
-    setRegister(LVT_TIMER_REGISTER, (getRegister(LVT_TIMER_REGISTER) & 0xFFFFFF00) | (irq + 32));
-    setRegister(LVT_TIMER_REGISTER, (getRegister(LVT_TIMER_REGISTER) & 0xFFF9FFFF) | TIMER_MODE_ONESHOT);
-    setRegister(DIVIDE_CONFIGURATION_REGISTER, 0x3);
+pub fn setInitialCount(cnt: u32) void {
+    setRegister(INITIAL_COUNT_REGISTER, cnt);
 }
 
-pub fn timerInit(irq: u8) void {
-    timerSetup(irq);
-    pit.setFrequency(100);
-    setRegister(INITIAL_COUNT_REGISTER, 0xFFFFFFFF);
-    setRegister(LVT_TIMER_REGISTER, getRegister(LVT_TIMER_REGISTER) & ~TIMER_MASK);
-    pit.delay(1);
-    setRegister(LVT_TIMER_REGISTER, getRegister(LVT_TIMER_REGISTER) | TIMER_MASK);
-    ticks_in_10ms = 0xFFFFFFFF - getRegister(CURRENT_COUNT_REGISTER);
+pub fn getCurrentCount() u32 {
+    return getRegister(CURRENT_COUNT_REGISTER);
 }
 
-pub fn sleep(ms: u32) void {
+pub fn configTimer() void {
+    setRegister(LVT_TIMER_REGISTER, 32);
+    pit.setFrequency(1000);
+    setInitialCount(0xFFFFFFFF);
+    pit.delay(1000);
+    setRegister(LVT_TIMER_REGISTER, TIMER_MASK);
+    time_in_ms = 0xFFFFFFFF - getCurrentCount();
+}
+
+pub fn sleep(ms: usize) void {
     for (0..ms) |_| {
-        setRegister(INITIAL_COUNT_REGISTER, ticks_in_10ms);
-        setRegister(DIVIDE_CONFIGURATION_REGISTER, 0x3);
-        setRegister(LVT_TIMER_REGISTER, (getRegister(LVT_TIMER_REGISTER) & 0xFFF9FFFF) | TIMER_MODE_ONESHOT);
-        setRegister(LVT_TIMER_REGISTER, getRegister(LVT_TIMER_REGISTER) & ~TIMER_MASK);
-        asm volatile (
-            \\ int $32
-        );
-        cpu.sti();
+        setInitialCount(time_in_ms);
         cpu.hlt();
     }
 }
