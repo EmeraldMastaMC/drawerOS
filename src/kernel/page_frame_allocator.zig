@@ -2,7 +2,9 @@ const main = @import("main.zig");
 const TOTAL_PT_ENTRIES = main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * main.PT_ENTRIES;
 const KERNEL_START: usize = 0x7E00;
 
-var page_bitmap: [TOTAL_PT_ENTRIES]u1 = [_]u1{0} ** TOTAL_PT_ENTRIES;
+// var page_bitmap: [TOTAL_PT_ENTRIES]u1 = [_]u1{0} ** TOTAL_PT_ENTRIES;
+var page_bitmap: [*]u1 = @ptrFromInt(0xb9000);
+const page_bitmap_len: usize = TOTAL_PT_ENTRIES;
 pub fn init() void {
     // Kernel Space (10 pages)
     for (0..10) |i| {
@@ -28,16 +30,20 @@ pub fn init() void {
     }
 
     // PT Table
-    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 10)) |i| {
+    for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 2)) |i| {
         const index = addrToBitmapPos(@intFromPtr(main.PT)) + i;
         page_bitmap[index] |= 1;
     }
 
-    // APIC Mapping
-    page_bitmap[0x4] |= 1;
-
     // Video memory
     page_bitmap[0xb8] |= 1;
+
+    reserve(0xb9000, 30);
+
+    // ACPI Tables 0xE0000 to 0xFFFFF
+    for (0xE0..0x100) |i| {
+        page_bitmap[i] |= 1;
+    }
 
     // Page 0. This is not able to be allocated so that we can use a null pointer for an error in the alloc function
     page_bitmap[0] |= 1;
@@ -55,7 +61,7 @@ pub fn alloc_page() usize {
 
 pub fn alloc(amnt_pages: usize) usize {
     // If we are trying to allocate more pages than we have to allocate
-    if (amnt_pages > page_bitmap.len) {
+    if (amnt_pages > page_bitmap_len) {
         // Null pointer
         return 0;
     } else {
@@ -81,7 +87,7 @@ pub fn alloc(amnt_pages: usize) usize {
                 while (true) { // This is guaranteed to end, because we already know a bit is set
                     if (window[j] == 1) {
                         window_index += j + 1; // Forward to the index after the last set bit
-                        if (window_index > (page_bitmap.len - amnt_pages)) { // Makes sure we have enough pages left to play with
+                        if (window_index > (page_bitmap_len - amnt_pages)) { // Makes sure we have enough pages left to play with
                             // null pointer
                             return 0;
                         }

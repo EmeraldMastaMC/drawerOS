@@ -2,6 +2,7 @@ AS = as
 CC = gcc
 ZC = zig build-obj
 CFLAGS = -fno-stack-protector -ffreestanding -m64 -Ttext 0x7E00
+# ZFLAGS = -fno-stack-protector -target x86_64-freestanding-none -fbuiltin -ODebug -fcompiler-rt
 ZFLAGS = -fno-stack-protector -target x86_64-freestanding-none -fbuiltin -OReleaseFast
 LINKER_SCRIPT = linker.ld
 LINKER = ld -T $(LINKER_SCRIPT)

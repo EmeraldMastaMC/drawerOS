@@ -13,14 +13,14 @@ const colors = console.Color;
 pub const PML4: [*]volatile paging.PML4Entry = @ptrFromInt(0x1000);
 pub const PDP: [*]volatile paging.PDPEntry = @ptrFromInt(0x2000);
 pub const PD: [*]volatile paging.PDEntry = @ptrFromInt(0x3000);
-pub const PT: [*]volatile paging.PTEntry = @ptrFromInt(0xc0000);
+pub const PT: [*]volatile paging.PTEntry = @ptrFromInt(0x100000);
 
 pub const PML4_ENTRIES: u64 = 1;
 pub const PDP_ENTRIES: u64 = 1;
-pub const PD_ENTRIES: u64 = 300;
+pub const PD_ENTRIES: u64 = 250;
 pub const PT_ENTRIES: u64 = 512;
 
-export fn main() noreturn {
+export fn main() linksection(".text") noreturn {
     // Use a writer that doesn't depend on interrupts to function.
     var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
