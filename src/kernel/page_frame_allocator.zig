@@ -1,11 +1,14 @@
 const main = @import("main.zig");
 const TOTAL_PT_ENTRIES = main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * main.PT_ENTRIES;
-const KERNEL_START: usize = 0x7E00;
+const KERNEL_START: *allowzero volatile void = @ptrFromInt(0x7E00);
 
 // var page_bitmap: [TOTAL_PT_ENTRIES]u1 = [_]u1{0} ** TOTAL_PT_ENTRIES;
-var page_bitmap: [*]u1 = @ptrFromInt(0xb9000);
+var page_bitmap: [*]volatile u8 = @ptrFromInt(0xb9000);
 const page_bitmap_len: usize = TOTAL_PT_ENTRIES;
 pub fn init() void {
+    for (0..(page_bitmap_len)) |i| {
+        page_bitmap[i] &= 0;
+    }
     // Kernel Space (10 pages)
     for (0..10) |i| {
         page_bitmap[addrToBitmapPos(KERNEL_START) + i] |= 1;
@@ -13,32 +16,34 @@ pub fn init() void {
 
     // PML4 Table
     for (0..1) |i| {
-        const index = addrToBitmapPos(@intFromPtr(main.PML4)) + i;
+        const index = addrToBitmapPos(@ptrCast(main.PML4)) + i;
         page_bitmap[index] |= 1;
     }
 
     // PDP Table
     for (0..(main.PML4_ENTRIES)) |i| {
-        const index = addrToBitmapPos(@intFromPtr(main.PDP)) + i;
+        const index = addrToBitmapPos(@ptrCast(main.PDP)) + i;
         page_bitmap[index] |= 1;
     }
 
     // PD Table
     for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES)) |i| {
-        const index = addrToBitmapPos(@intFromPtr(main.PD)) + i;
+        const index = addrToBitmapPos(@ptrCast(main.PD)) + i;
         page_bitmap[index] |= 1;
     }
 
     // PT Table
     for (0..(main.PML4_ENTRIES * main.PDP_ENTRIES * main.PD_ENTRIES * 2)) |i| {
-        const index = addrToBitmapPos(@intFromPtr(main.PT)) + i;
+        const index = addrToBitmapPos(@ptrCast(main.PT)) + i;
         page_bitmap[index] |= 1;
     }
 
     // Video memory
     page_bitmap[0xb8] |= 1;
 
-    reserve(0xb9000, 30);
+    page_bitmap[0x4] |= 1;
+
+    reserve(@ptrFromInt(0xb9000), page_bitmap_len / 0x1000);
 
     // ACPI Tables 0xE0000 to 0xFFFFF
     for (0xE0..0x100) |i| {
@@ -48,22 +53,22 @@ pub fn init() void {
     // Page 0. This is not able to be allocated so that we can use a null pointer for an error in the alloc function
     page_bitmap[0] |= 1;
 }
-pub fn alloc_page() usize {
+pub fn alloc_page() *allowzero volatile void {
     for (0..TOTAL_PT_ENTRIES) |i| {
         if (page_bitmap[i] == 0) {
-            page_bitmap[i] = 1;
-            return bitmapPosToAddr(i);
+            page_bitmap[i] |= 1;
+            return @ptrFromInt(bitmapPosToAddr(i));
         }
     }
     // Null pointer
-    return 0;
+    return @ptrFromInt(0);
 }
 
-pub fn alloc(amnt_pages: usize) usize {
+pub fn alloc(amnt_pages: usize) *allowzero volatile void {
     // If we are trying to allocate more pages than we have to allocate
     if (amnt_pages > page_bitmap_len) {
         // Null pointer
-        return 0;
+        return @ptrFromInt(0);
     } else {
         var window_index: usize = 0;
         while (true) {
@@ -89,7 +94,7 @@ pub fn alloc(amnt_pages: usize) usize {
                         window_index += j + 1; // Forward to the index after the last set bit
                         if (window_index > (page_bitmap_len - amnt_pages)) { // Makes sure we have enough pages left to play with
                             // null pointer
-                            return 0;
+                            return @ptrFromInt(0);
                         }
                         break;
                     }
@@ -98,7 +103,7 @@ pub fn alloc(amnt_pages: usize) usize {
             } else { // We didn't detect a page in use, return the start of the window's address, and set all bits in the window
                 var k: usize = 0;
                 while (k != amnt_pages) {
-                    page_bitmap[window_index + k] = 1;
+                    page_bitmap[window_index + k] |= 1;
                     k += 1;
                 }
                 return bitmapPosToAddr(window_index);
@@ -107,34 +112,34 @@ pub fn alloc(amnt_pages: usize) usize {
     }
 }
 
-pub fn reserve(addr: usize, amnt_pages: usize) void {
+pub fn reserve(addr: *allowzero volatile void, amnt_pages: usize) void {
     const index = addrToBitmapPos(addr);
     for (index..(index + amnt_pages)) |i| {
-        page_bitmap[i] = 1;
+        page_bitmap[i] |= 1;
     }
 }
 
-pub fn reserve_page(addr: usize) void {
+pub fn reserve_page(addr: *allowzero volatile void) void {
     const index = addrToBitmapPos(addr);
-    page_bitmap[index] = 1;
+    page_bitmap[index] |= 1;
 }
 
-pub fn free_page(addr: usize) void {
+pub fn free_page(addr: *allowzero volatile void) void {
     const index = addrToBitmapPos(addr);
-    page_bitmap[index] = 0;
+    page_bitmap[index] &= 0;
 }
 
-pub fn free(addr: usize, amnt_pages: usize) void {
+pub fn free(addr: *allowzero volatile void, amnt_pages: usize) void {
     const index = addrToBitmapPos(addr);
     for (index..(index + amnt_pages)) |i| {
-        page_bitmap[i] = 0;
+        page_bitmap[i] &= 0;
     }
 }
 
-inline fn addrToBitmapPos(addr: usize) usize {
-    return addr >> 12;
+inline fn addrToBitmapPos(addr: *allowzero volatile void) usize {
+    return @intFromPtr(addr) >> 12;
 }
 
-inline fn bitmapPosToAddr(pos: usize) usize {
-    return pos << 12;
+inline fn bitmapPosToAddr(pos: usize) *allowzero volatile void {
+    return @as(*allowzero volatile void, @ptrFromInt(pos << 12));
 }

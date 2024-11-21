@@ -1,5 +1,6 @@
 const idt = @import("idt.zig");
 const apic = @import("apic.zig");
+const acpi = @import("acpi.zig");
 const pit = @import("pit.zig");
 const irq = @import("irq.zig");
 const cpu = @import("cpu.zig");
@@ -25,37 +26,37 @@ export fn main() linksection(".text") noreturn {
     var raw_writer = console.RawWriter.new(colors.White, colors.Black);
     raw_writer.clear();
 
-    raw_writer.putString("Identity Mapping 600MiB...\n");
+    raw_writer.putString("Identity Mapping 600MiB...\n\x00");
     paging.identityMap(PML4, PML4_ENTRIES, PDP, PDP_ENTRIES, PD, PD_ENTRIES, PT, PT_ENTRIES);
-    raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n\x00");
 
-    raw_writer.putString("Initializing Page Frame Allocator...\n");
+    raw_writer.putString("Initializing Page Frame Allocator...\n\x00");
     allocator.init();
-    raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n\x00");
 
-    raw_writer.putString("Allocating Stack 40KiB...\n");
-    stack.init(allocator.alloc(10));
-    raw_writer.putString("Done.\n");
+    raw_writer.putString("Allocating Stack 40KiB...\n\x00");
+    stack.init(@intFromPtr(allocator.alloc(10)));
+    raw_writer.putString("Done.\n\x00");
 
-    raw_writer.putString("Loading Interrupt Descriptor Table...\n");
+    raw_writer.putString("Loading Interrupt Descriptor Table...\n\x00");
     idt.initEntries();
     idt.load();
-    raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n\x00");
 
-    raw_writer.putString("Initializing Programmable Interval Timer\n");
+    raw_writer.putString("Initializing Programmable Interval Timer\n\x00");
     pit.configure(pit.Channel.Two, pit.Mode.OneShot);
-    raw_writer.putString("Done.\n");
+    raw_writer.putString("Done.\n\x00");
 
     apic.enable();
     apic.setupTimer();
 
-    const back_buffer: [*]volatile u16 = @ptrFromInt(allocator.alloc(10));
-    defer allocator.free(@intFromPtr(back_buffer), 10);
+    const back_buffer: [*]volatile u16 = @alignCast(@ptrCast(allocator.alloc(1)));
+    defer allocator.free(@ptrCast(back_buffer), 1);
     var writer = console.Writer.new(colors.White, colors.Black, back_buffer);
     writer.enableCursor();
     writer.putLn();
     writer.setColors(colors.LightGreen, colors.Black);
-    writer.putString("Welcome to DrawerOS!\n");
+    writer.putString("Welcome to DrawerOS!\n\x00");
     writer.setColors(colors.White, colors.Black);
     writer.flush();
 

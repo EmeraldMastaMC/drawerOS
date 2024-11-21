@@ -56,8 +56,9 @@ run:
 											-d int \
 											-m 4G \
 											-device qemu-xhci \
-											-bios /usr/share/qemu/bios-256k.bin \
+											-bios /usr/share/qemu/bios.bin \
 											-machine q35,accel=kvm \
+											-device pcie-root-port \
 											-cpu host \
 											-boot order=c \
 

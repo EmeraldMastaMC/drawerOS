@@ -162,6 +162,9 @@ pub const Writer = struct {
             else => 'X',
         });
     }
+    pub fn putPtr(self: *volatile Writer, ptr: *allowzero volatile void) void {
+        self.putHexQuad(@intFromPtr(ptr));
+    }
     pub fn putHexQuad(self: *volatile Writer, num: u64) void {
         var hex = num;
         var i: usize = 16;
@@ -277,9 +280,20 @@ pub const Writer = struct {
             i -= 1;
         }
     }
-    pub fn putString(self: *volatile Writer, str: []const u8) void {
-        for (str) |char| {
-            self.putChar(char);
+    pub inline fn putString(self: *volatile Writer, str: [*]const u8) void {
+        var len: usize = 0;
+        var foundNullTerm = false;
+        var index: usize = 0;
+        while (!foundNullTerm) {
+            if (str[index] == 0x00) {
+                foundNullTerm = true;
+            } else {
+                index += 1;
+                len += 1;
+            }
+        }
+        for (0..len) |i| {
+            self.putChar(str[i]);
         }
     }
 
@@ -587,9 +601,20 @@ pub const RawWriter = struct {
             i -= 1;
         }
     }
-    pub fn putString(self: *RawWriter, str: []const u8) void {
-        for (str) |char| {
-            self.putChar(char);
+    pub inline fn putString(self: *RawWriter, str: [*]const u8) void {
+        var len: usize = 0;
+        var foundNullTerm = false;
+        var index: usize = 0;
+        while (!foundNullTerm) {
+            if (str[index] == 0x00) {
+                foundNullTerm = true;
+            } else {
+                index += 1;
+                len += 1;
+            }
+        }
+        for (0..len) |i| {
+            self.putChar(str[i]);
         }
     }
 

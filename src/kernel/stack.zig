@@ -1,7 +1,7 @@
 const page_frame_allocator = @import("page_frame_allocator.zig");
 const paging = @import("paging.zig");
 pub fn alloc(size: usize) usize {
-    const frame = page_frame_allocator.alloc(size);
+    const frame = @intFromPtr(page_frame_allocator.alloc(size));
     return (paging.PAGE_SIZE * size) + frame - 1;
 }
 
