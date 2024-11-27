@@ -94,6 +94,12 @@ export fn main() linksection(".text") noreturn {
     //     writer.flush();
     // }
     //
+    acpi.findMagic();
+    apic.sleep(3000);
+    writer.clear();
+    writer.flush();
+    writer.putHexQuad(@intFromPtr(back_buffer));
+    writer.flush();
     for (1..60) |i| {
         writer.putLn();
         writer.putNum(i);
